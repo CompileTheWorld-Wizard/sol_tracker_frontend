@@ -1,0 +1,126 @@
+const API_BASE = '/api/wallets'
+
+export const validateWallet = async (address: string): Promise<{ valid: boolean; error?: string }> => {
+  try {
+    const response = await fetch(`${API_BASE}/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ address }),
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      return { valid: false, error: data.error || 'Validation failed' }
+    }
+    
+    return data
+  } catch (error) {
+    return { valid: false, error: 'Network error. Please try again.' }
+  }
+}
+
+export interface Wallet {
+  address: string
+  nickname: string | null
+}
+
+export const getCreatorWallets = async (): Promise<Wallet[]> => {
+  try {
+    const response = await fetch(`${API_BASE}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch blacklist wallets')
+    }
+
+    const data = await response.json()
+    return data.wallets || []
+  } catch (error) {
+    console.error('Error fetching blacklist wallets:', error)
+    return []
+  }
+}
+
+export const addCreatorWallet = async (address: string, nickname?: string | null): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const response = await fetch(`${API_BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ address, nickname }),
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to add wallet' }
+    }
+    
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Network error. Please try again.' }
+  }
+}
+
+export const removeCreatorWallet = async (address: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(address)}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Failed to remove wallet' }
+    }
+    
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Network error. Please try again.' }
+  }
+}
+
+export interface WalletStats {
+  totalTokens: number
+  bondedTokens: number
+  bondedRate: number
+  avgAthMcap: number | null
+}
+
+export const getWalletStats = async (address: string): Promise<WalletStats> => {
+  try {
+    const response = await fetch(`${API_BASE}/${encodeURIComponent(address)}/stats`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch wallet statistics')
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching wallet statistics:', error)
+    throw error
+  }
+}
+
