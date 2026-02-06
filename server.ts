@@ -261,58 +261,6 @@ app.post('/api/auth/change-password', async (req, res) => {
     });
   }
 });
-
-app.post('/api/auth/clear-database', async (req, res) => {
-  const isAuthenticated = (req.session as any)?.authenticated === true;
-  if (!isAuthenticated) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ 
-      error: 'Password is required' 
-    });
-  }
-
-  try {
-    const result = await pool.query(
-      'SELECT password_hash FROM passwords ORDER BY id DESC LIMIT 1'
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(500).json({ 
-        error: 'Password not configured' 
-      });
-    }
-
-    const passwordHash = result.rows[0].password_hash;
-    const isValid = await bcrypt.compare(password, passwordHash);
-
-    if (!isValid) {
-      return res.status(401).json({ 
-        error: 'Invalid password' 
-      });
-    }
-
-    await pool.query('TRUNCATE TABLE tbl_soltrack_created_tokens CASCADE');
-    await pool.query('TRUNCATE TABLE tbl_soltrack_blacklist_creator CASCADE');
-
-    console.log('[ClearDatabase] Database cleared successfully');
-
-    return res.json({ 
-      success: true, 
-      message: 'Database cleared successfully' 
-    });
-  } catch (error: any) {
-    console.error('Clear database error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error' 
-    });
-  }
-});
-
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', server: 'frontend-server' });
@@ -449,7 +397,9 @@ const getBackendTarget = (req: express.Request): string | null => {
   }
   
   // Creator Tracker specific routes
-  if (path.startsWith('/stream') || path.startsWith('/settings')) {
+  if (path.startsWith('/stream') || 
+      path.startsWith('/settings') || 
+      path.startsWith('/database')) {
     return `http://127.0.0.1:${CREATOR_TRACKER_PORT}`;
   }
   

@@ -66,7 +66,7 @@ export const clearDatabase = async (
   password: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
-    const response = await fetch(`${API_BASE}/clear-database`, {
+    const response = await fetch(`/api/database/clear`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
