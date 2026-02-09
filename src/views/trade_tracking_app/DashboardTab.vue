@@ -737,7 +737,6 @@ const DATA_POINTS = [
   { key: 'tokenPeakMarketCapBeforeFirstSell', label: 'Token Peak Market Cap Before 1st Sell', type: 'marketcap', field: 'tokenPeakMarketCapBeforeFirstSell' },
   { key: 'tokenPeakMarketCap10sAfterFirstSell', label: 'Token Peak Market Cap 10s After 1st Sell', type: 'marketcap', field: 'tokenPeakMarketCap10sAfterFirstSell' },
   { key: 'walletBuyBlockNumberAfterDev', label: 'Wallet Block # after dev', type: 'marketcap', field: 'walletBuyBlockNumberAfterDev' },
-  { key: 'walletBuyPositionAfterDev', label: 'Wallet Position after dev', type: 'marketcap', field: 'walletBuyPositionAfterDev' },
   
   // Token Amount filters
   { key: 'devBuyAmountTokens', label: 'Dev Buy Amount in Tokens', type: 'token', field: 'devBuyAmountTokens' },
@@ -842,6 +841,10 @@ const formatCellValue = (key: string, item: any): string => {
   
   // Handle numbers
   if (typeof value === 'number') {
+    // For position values, show as integers without decimals
+    if (key === 'walletBuyPositionAfterDev') {
+      return Math.round(value).toString()
+    }
     // For very small numbers (like prices), use more decimal places
     if (Math.abs(value) > 0 && Math.abs(value) < 0.01) {
       // Use up to 9 decimal places for small numbers, but remove trailing zeros
