@@ -1372,15 +1372,17 @@ onMounted(async () => {
   }
 })
 
-onUnmounted(async () => {
-  if (isTracking.value) {
-    try {
-      await stopStream()
-    } catch (error) {
-      console.error('Error stopping stream on unmount:', error)
-    }
-  }
-})
+// Auto-stop on unmount removed - stream now persists when navigating away
+// Users must manually stop the stream using the stop button
+// onUnmounted(async () => {
+//   if (isTracking.value) {
+//     try {
+//       await stopStream()
+//     } catch (error) {
+//       console.error('Error stopping stream on unmount:', error)
+//     }
+//   }
+// })
 
 watch(showManageDialog, async (isOpen) => {
   if (isOpen) {
