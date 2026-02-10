@@ -288,7 +288,7 @@ const updateSolPrice = async () => {
   }
 }
 
-const addAddress = () => {
+const addAddress = async () => {
   const address = newAddress.value.trim()
   if (!address) return
   
@@ -309,10 +309,21 @@ const addAddress = () => {
   
   addresses.value.push(address)
   newAddress.value = ''
+
+  const setResult = await setAddresses(addresses.value)
+  if (!setResult.success) {
+    alert('Failed to set addresses: ' + setResult.error)
+    return
+  }
 }
 
-const removeAddress = (index: number) => {
+const removeAddress = async (index: number) => {
   addresses.value.splice(index, 1)
+  const setResult = await setAddresses(addresses.value)
+  if (!setResult.success) {
+    alert('Failed to set addresses: ' + setResult.error)
+    return
+  }
 }
 
 const handleStartTracking = async () => {
