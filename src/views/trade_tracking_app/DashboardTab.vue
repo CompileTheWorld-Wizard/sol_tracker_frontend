@@ -411,12 +411,24 @@
       <div v-else class="table-container" style="overflow-x: auto; overflow-y: auto; max-height: 70vh; border: 1px solid #334155; position: relative;">
         <table style="width: 100%; border-collapse: collapse; background: #0f1419;">
           <thead style="position: sticky; top: 0; z-index: 10; background: #0f1419;">
+            <!-- Group Header Row -->
+            <tr>
+              <th
+                v-for="(group, index) in groupedHeaders"
+                :key="`group-${index}`"
+                :colspan="group.colspan"
+                style="padding: 4px 8px; text-align: center; background: #0f1419; color: #94a3b8; font-weight: 700; border: 1px solid #334155; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 11; font-size: 0.75rem;"
+              >
+                {{ group.label }}
+              </th>
+            </tr>
+            <!-- Column Header Row -->
             <tr>
               <th
                 v-for="col in visibleColumns"
                 :key="col.key"
                 @click="sortByColumn(col.key)"
-                style="padding: 6px 8px; text-align: center; background: #1a1f2e; color: #e0e7ff; font-weight: 600; border: 1px solid #334155; border-bottom: 2px solid #334155; position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none; font-size: 0.7rem;"
+                style="padding: 6px 8px; text-align: center; background: #1a1f2e; color: #e0e7ff; font-weight: 600; border: 1px solid #334155; border-bottom: 2px solid #334155; position: sticky; top: 28px; z-index: 10; cursor: pointer; user-select: none; font-size: 0.7rem;"
               >
                 {{ col.label }}
                 <span v-if="sortColumn === col.key" style="margin-left: 3px;">
@@ -681,6 +693,40 @@ const columnDefinitions = ref([
   { key: 'transactionSignature', label: 'Transaction Signature', order: 25, group: 'Transaction' }
 ])
 
+// Function to generate sell columns dynamically
+const generateSellColumns = () => {
+  // Remove existing sell columns
+  columnDefinitions.value = columnDefinitions.value.filter(col => !col.group?.startsWith('Sell '))
+  
+  // Add new sell columns based on maxSells
+  const baseOrder = 1000 // Start sell columns after all regular columns
+  for (let i = 1; i <= maxSells.value; i++) {
+    const sellGroup = `Sell ${i}`
+    const offset = (i - 1) * 10
+    
+    columnDefinitions.value.push(
+      { key: `sell${i}_sellNumber`, label: `Sell #${i} Number`, order: baseOrder + offset + 0, group: sellGroup },
+      { key: `sell${i}_marketCap`, label: `Sell #${i} Market Cap`, order: baseOrder + offset + 1, group: sellGroup },
+      { key: `sell${i}_firstSellPNL`, label: `Sell #${i} PNL`, order: baseOrder + offset + 2, group: sellGroup },
+      { key: `sell${i}_sellPercentOfBuy`, label: `Sell #${i} % of Buy`, order: baseOrder + offset + 3, group: sellGroup },
+      { key: `sell${i}_sellAmountSOL`, label: `Sell #${i} Amount SOL`, order: baseOrder + offset + 4, group: sellGroup },
+      { key: `sell${i}_sellAmountTokens`, label: `Sell #${i} Amount Tokens`, order: baseOrder + offset + 5, group: sellGroup },
+      { key: `sell${i}_transactionSignature`, label: `Sell #${i} Tx Signature`, order: baseOrder + offset + 6, group: sellGroup },
+      { key: `sell${i}_timestamp`, label: `Sell #${i} Timestamp`, order: baseOrder + offset + 7, group: sellGroup },
+      { key: `sell${i}_profitAtSell`, label: `Sell #${i} Profit`, order: baseOrder + offset + 8, group: sellGroup },
+      { key: `sell${i}_holdingTimeSeconds`, label: `Sell #${i} Holding Time`, order: baseOrder + offset + 9, group: sellGroup },
+      { key: `sell${i}_devStillHolding`, label: `Sell #${i} Dev Still Holding`, order: baseOrder + offset + 10, group: sellGroup }
+    )
+  }
+  
+  // Initialize visibility for new columns
+  columnDefinitions.value.forEach(col => {
+    if (columnVisibility.value[col.key] === undefined) {
+      columnVisibility.value[col.key] = true
+    }
+  })
+}
+
 // Computed
 const visibleColumns = computed(() => {
   return columnDefinitions.value
@@ -688,10 +734,63 @@ const visibleColumns = computed(() => {
     .sort((a, b) => (a.order || 0) - (b.order || 0))
 })
 
+// Generate grouped header structure
+const groupedHeaders = computed(() => {
+  const groups: Array<{ label: string; colspan: number }> = []
+  let currentGroup: string | null = null
+  let currentColspan = 0
+  
+  visibleColumns.value.forEach((col, index) => {
+    const group = col.group || 'Other'
+    
+    if (currentGroup === group) {
+      // Same group, increase colspan
+      currentColspan++
+    } else {
+      // New group, save previous group if exists
+      if (currentGroup !== null) {
+        groups.push({ 
+          label: currentGroup, 
+          colspan: currentColspan
+        })
+      }
+      currentGroup = group
+      currentColspan = 1
+    }
+    
+    // If last column, add the group
+    if (index === visibleColumns.value.length - 1) {
+      groups.push({ 
+        label: currentGroup, 
+        colspan: currentColspan
+      })
+    }
+  })
+  
+  return groups
+})
+
 const sortedData = computed(() => {
   if (!sortColumn.value) return dashboardData.value
   
   const sorted = [...dashboardData.value].sort((a, b) => {
+    // Handle sell columns
+    const sellMatch = sortColumn.value!.match(/^sell(\d+)_(.+)$/)
+    if (sellMatch) {
+      const sellIndex = parseInt(sellMatch[1]) - 1
+      const sellField = sellMatch[2]
+      
+      const aVal = a.sells?.[sellIndex]?.[sellField]
+      const bVal = b.sells?.[sellIndex]?.[sellField]
+      
+      if (aVal === null || aVal === undefined) return 1
+      if (bVal === null || bVal === undefined) return -1
+      
+      const comparison = aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+      return sortDirection.value === 'asc' ? comparison : -comparison
+    }
+    
+    // Handle regular columns
     const aVal = a[sortColumn.value!]
     const bVal = b[sortColumn.value!]
     
@@ -783,6 +882,70 @@ const getOrdinal = (n: number): string => {
 }
 
 const formatCellValue = (key: string, item: any): string => {
+  // Handle sell columns (e.g., sell1_marketCap, sell2_firstSellPNL, etc.)
+  const sellMatch = key.match(/^sell(\d+)_(.+)$/)
+  if (sellMatch) {
+    const sellIndex = parseInt(sellMatch[1]) - 1
+    const sellField = sellMatch[2]
+    
+    if (!item.sells || !Array.isArray(item.sells) || !item.sells[sellIndex]) {
+      return '-'
+    }
+    
+    const sell = item.sells[sellIndex]
+    const value = sell[sellField]
+    
+    if (value === null || value === undefined) return '-'
+    
+    // Handle sell transaction signature
+    if (sellField === 'transactionSignature' && typeof value === 'string') {
+      if (value.length > 14) {
+        const truncated = `${value.substring(0, 8)}...${value.substring(value.length - 6)}`
+        const url = `https://solscan.io/tx/${value}`
+        return `<a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: none;">${truncated}</a>`
+      }
+      const url = `https://solscan.io/tx/${value}`
+      return `<a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: none;">${value}</a>`
+    }
+    
+    // Handle sell timestamp
+    if (sellField === 'timestamp') {
+      try {
+        return new Date(value).toLocaleString()
+      } catch {
+        return String(value)
+      }
+    }
+    
+    // Handle sell holding time
+    if (sellField === 'holdingTimeSeconds' && typeof value === 'number') {
+      return formatHoldingTime(value)
+    }
+    
+    // Handle devStillHolding boolean
+    if (sellField === 'devStillHolding') {
+      return value ? '✅ Yes' : '❌ No'
+    }
+    
+    // Handle sell percentages
+    if (sellField.includes('Percent') || sellField === 'firstSellPNL') {
+      return typeof value === 'number' ? `${value.toFixed(2)}%` : String(value)
+    }
+    
+    // Handle sell numbers
+    if (typeof value === 'number') {
+      if (Math.abs(value) > 0 && Math.abs(value) < 0.01) {
+        return value.toFixed(9).replace(/\.?0+$/, '')
+      }
+      if (Math.abs(value) >= 1000) {
+        return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+      }
+      return value.toFixed(2)
+    }
+    
+    return String(value)
+  }
+  
   const value = item[key]
   if (value === null || value === undefined) return '-'
   
@@ -863,6 +1026,33 @@ const formatCellValue = (key: string, item: any): string => {
 
 const getCellStyle = (key: string, item: any): Record<string, string> => {
   const style: Record<string, string> = {}
+  
+  // Handle sell column styling
+  const sellMatch = key.match(/^sell(\d+)_(.+)$/)
+  if (sellMatch) {
+    const sellIndex = parseInt(sellMatch[1]) - 1
+    const sellField = sellMatch[2]
+    
+    if (item.sells && Array.isArray(item.sells) && item.sells[sellIndex]) {
+      const sell = item.sells[sellIndex]
+      const value = sell[sellField]
+      
+      // Color code sell PNL values
+      if (sellField === 'firstSellPNL' || sellField === 'profitAtSell') {
+        if (typeof value === 'number') {
+          style.color = value >= 0 ? '#10b981' : '#ef4444'
+        }
+      }
+      
+      // Monospace for transaction signatures
+      if (sellField === 'transactionSignature') {
+        style.fontFamily = "'Courier New', monospace"
+        style.fontSize = '0.7rem'
+      }
+    }
+    
+    return style
+  }
   
   // Color code PNL values
   if (key === 'pnlSOL' || key === 'pnlPercent') {
@@ -947,6 +1137,8 @@ const loadDashboardData = async () => {
       // Calculate max sells from dashboard data
       if (dataResult.success && dataResult.data) {
         maxSells.value = Math.max(...(dataResult.data.map((item: any) => (item.sells?.length || 0))), 0)
+        // Regenerate sell columns when maxSells changes
+        generateSellColumns()
       }
       
       // Recalculate what-if totals if what-if mode is enabled
