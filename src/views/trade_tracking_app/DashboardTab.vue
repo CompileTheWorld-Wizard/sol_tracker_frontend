@@ -1162,7 +1162,7 @@ const loadDashboardData = async () => {
 
 const exportDashboard = async () => {
   if (!selectedWallet.value) return
-  await downloadAllTokensExcel(selectedWallet.value)
+  await downloadAllTokensExcel(selectedWallet.value, activeFilters.value)
 }
 
 const exportAllWallets = async () => {

@@ -575,11 +575,15 @@ export async function downloadTokenExcel(walletAddress: string, tokenAddress: st
 /**
  * Download all tokens Excel
  */
-export async function downloadAllTokensExcel(walletAddress: string) {
+export async function downloadAllTokensExcel(walletAddress: string, filters: any[] = []) {
   try {
     const response = await fetch(`${API_BASE}/export-all-tokens-excel/${encodeURIComponent(walletAddress)}`, {
-      method: 'GET',
-      credentials: 'include'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ filters })
     })
 
     if (!response.ok) {
