@@ -742,7 +742,8 @@
         <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg"
           :class="isTracking || trackingLoading ? 'bg-red-600/90 text-white' : 'bg-green-600/90 text-white'"
         >
-          <span v-if="trackingLoading">Finalizing...</span>
+          <span v-if="isStopping">Stopping stream...</span>
+          <span v-else-if="trackingLoading">Starting...</span>
           <span v-else-if="isTracking">Stop Tracking</span>
           <span v-else>Start Tracking</span>
         </span>
@@ -838,6 +839,7 @@ const creatorWalletsTabRef = ref<InstanceType<typeof CreatorWalletsTab> | null>(
 const walletNicknameInput = ref('')
 const isTracking = ref(false)
 const trackingLoading = ref(false)
+const isStopping = ref(false)
 const streamingStartTime = ref<number | null>(null)
 const currentTime = ref(Date.now())
 const showManageDialog = ref(false)
@@ -1109,9 +1111,44 @@ const toggleTracking = async () => {
   
   try {
     if (isTracking.value) {
+      // Mark as stopping
+      isStopping.value = true
+      
+      // Initiate stop request
       await stopStream()
-      isTracking.value = false
-      streamingStartTime.value = null
+      
+      // Poll status API to check if stream has actually stopped
+      let attempts = 0
+      const maxAttempts = 30 // 30 seconds max (30 * 1 second)
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+        
+        try {
+          const statusResponse = await getStreamStatus()
+          
+          if (!statusResponse.status) {
+            // Stream has stopped
+            isTracking.value = false
+            streamingStartTime.value = null
+            break
+          }
+          
+          attempts++
+        } catch (error) {
+          console.error('Error checking stream status:', error)
+          attempts++
+        }
+      }
+      
+      // If we exceeded max attempts, still mark as stopped locally
+      if (attempts >= maxAttempts) {
+        console.warn('Stream stop polling timed out, marking as stopped anyway')
+        isTracking.value = false
+        streamingStartTime.value = null
+      }
+      
+      isStopping.value = false
     } else {
       const response = await startStream()
       isTracking.value = true
@@ -1123,6 +1160,7 @@ const toggleTracking = async () => {
   } catch (error: any) {
     console.error('Error toggling stream:', error)
     alert(error.message || 'Failed to toggle streaming')
+    isStopping.value = false
   } finally {
     trackingLoading.value = false
   }
