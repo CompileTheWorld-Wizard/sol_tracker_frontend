@@ -672,6 +672,16 @@
 
     <!-- Sticky Action Buttons (Bottom Right) - Icon-only with hover expansion -->
     <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+      <!-- Streaming Period Display -->
+      <div class="group relative" v-if="isTracking && !trackingLoading">
+        <div class="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center cursor-default">
+          <span class="text-purple-400 font-semibold text-xs">{{ getStreamingPeriod() }}</span>
+        </div>
+        <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
+          <span class="text-purple-400">Streaming:</span> <span class="text-green-400">{{ getStreamingPeriodDetailed() }}</span>
+        </span>
+      </div>
+      
       <div class="group relative">
         <button
           @click="showManageDialog = true"
@@ -828,6 +838,8 @@ const creatorWalletsTabRef = ref<InstanceType<typeof CreatorWalletsTab> | null>(
 const walletNicknameInput = ref('')
 const isTracking = ref(false)
 const trackingLoading = ref(false)
+const streamingStartTime = ref<number | null>(null)
+const currentTime = ref(Date.now())
 const showManageDialog = ref(false)
 const showChangePasswordDialog = ref(false)
 const showClearDatabaseDialog = ref(false)
@@ -909,6 +921,46 @@ const formatCurrency = (value: number | null): string => {
 const formatWalletAddress = (address: string): string => {
   if (!address) return ''
   return `${address.slice(0, 8)}...${address.slice(-8)}`
+}
+
+// Format streaming period - compact version
+const getStreamingPeriod = (): string => {
+  if (!streamingStartTime.value) return '--'
+  
+  const elapsed = Math.floor((currentTime.value - streamingStartTime.value) / 1000)
+  
+  if (elapsed < 60) {
+    return `${elapsed}s`
+  } else if (elapsed < 3600) {
+    const minutes = Math.floor(elapsed / 60)
+    return `${minutes}m`
+  } else if (elapsed < 86400) {
+    const hours = Math.floor(elapsed / 3600)
+    return `${hours}h`
+  } else {
+    const days = Math.floor(elapsed / 86400)
+    return `${days}d`
+  }
+}
+
+// Format streaming period - detailed version for hover
+const getStreamingPeriodDetailed = (): string => {
+  if (!streamingStartTime.value) return 'Not streaming'
+  
+  const elapsed = Math.floor((currentTime.value - streamingStartTime.value) / 1000)
+  
+  const days = Math.floor(elapsed / 86400)
+  const hours = Math.floor((elapsed % 86400) / 3600)
+  const minutes = Math.floor((elapsed % 3600) / 60)
+  const seconds = elapsed % 60
+  
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
+  if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`)
+  if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`)
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`)
+  
+  return parts.join(' ')
 }
 
 const handleAddWallet = async () => {
@@ -1059,9 +1111,14 @@ const toggleTracking = async () => {
     if (isTracking.value) {
       await stopStream()
       isTracking.value = false
+      streamingStartTime.value = null
     } else {
-      await startStream()
+      const response = await startStream()
       isTracking.value = true
+      // Set streaming start time from API response
+      if (response.streamStartedAt) {
+        streamingStartTime.value = response.streamStartedAt
+      }
     }
   } catch (error: any) {
     console.error('Error toggling stream:', error)
@@ -1361,6 +1418,10 @@ onMounted(async () => {
     
     const response = await getStreamStatus()
     isTracking.value = response.status || false
+    // Set streaming start time from API response
+    if (response.streamStartedAt) {
+      streamingStartTime.value = response.streamStartedAt
+    }
     
     await Promise.all([
       loadCreatorWallets(),
@@ -1370,6 +1431,16 @@ onMounted(async () => {
   } catch (error) {
     console.error('Error loading data:', error)
   }
+  
+  // Update current time every second for streaming period
+  const timeUpdateInterval = setInterval(() => {
+    currentTime.value = Date.now()
+  }, 1000)
+  
+  // Clean up interval on unmount
+  onUnmounted(() => {
+    clearInterval(timeUpdateInterval)
+  })
 })
 
 // Auto-stop on unmount removed - stream now persists when navigating away
