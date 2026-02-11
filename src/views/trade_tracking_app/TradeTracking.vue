@@ -175,6 +175,16 @@
 
     <!-- Sticky Action Buttons (Bottom Right) - Icon-only with hover expansion -->
     <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+      <!-- Streaming Period Display -->
+      <div class="group relative" v-if="isTracking">
+        <div class="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center cursor-default">
+          <span class="text-purple-400 font-semibold text-xs">{{ getStreamingPeriod() }}</span>
+        </div>
+        <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
+          <span class="text-purple-400">Streaming:</span> <span class="text-green-400">{{ getStreamingPeriodDetailed() }}</span>
+        </span>
+      </div>
+      
       <!-- SOL Price Display -->
       <div class="group relative">
         <div class="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center cursor-default">
@@ -260,9 +270,12 @@ const skipTokensExpanded = ref(false)
 const activeTab = ref('dashboard')
 const selectedWallet = ref('')
 const showPasswordModal = ref(false)
+const streamingStartTime = ref<number | null>(null)
+const currentTime = ref(Date.now())
 
 let statusInterval: NodeJS.Timeout | null = null
 let solPriceInterval: NodeJS.Timeout | null = null
+let timeUpdateInterval: NodeJS.Timeout | null = null
 
 const loadStatus = async () => {
   const result = await fetchTrackingStatus()
@@ -271,6 +284,13 @@ const loadStatus = async () => {
     addresses.value = result.data.addresses || []
     trackedAddresses.value = addresses.value.length
     totalTransactions.value = result.data.totalTransactions || 0
+    
+    // Set streaming start time from API response
+    if (result.data.startedTime) {
+      streamingStartTime.value = new Date(result.data.startedTime).getTime()
+    } else {
+      streamingStartTime.value = null
+    }
   }
 }
 
@@ -286,6 +306,46 @@ const updateSolPrice = async () => {
   if (result.success && result.price !== null) {
     solPrice.value = parseFloat(result.price.toString()).toFixed(2)
   }
+}
+
+// Format streaming period - compact version
+const getStreamingPeriod = (): string => {
+  if (!streamingStartTime.value) return '--'
+  
+  const elapsed = Math.floor((currentTime.value - streamingStartTime.value) / 1000)
+  
+  if (elapsed < 60) {
+    return `${elapsed}s`
+  } else if (elapsed < 3600) {
+    const minutes = Math.floor(elapsed / 60)
+    return `${minutes}m`
+  } else if (elapsed < 86400) {
+    const hours = Math.floor(elapsed / 3600)
+    return `${hours}h`
+  } else {
+    const days = Math.floor(elapsed / 86400)
+    return `${days}d`
+  }
+}
+
+// Format streaming period - detailed version for hover
+const getStreamingPeriodDetailed = (): string => {
+  if (!streamingStartTime.value) return 'Not streaming'
+  
+  const elapsed = Math.floor((currentTime.value - streamingStartTime.value) / 1000)
+  
+  const days = Math.floor(elapsed / 86400)
+  const hours = Math.floor((elapsed % 86400) / 3600)
+  const minutes = Math.floor((elapsed % 3600) / 60)
+  const seconds = elapsed % 60
+  
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
+  if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`)
+  if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`)
+  if (seconds > 0 || parts.length === 0) parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`)
+  
+  return parts.join(' ')
 }
 
 const addAddress = async () => {
@@ -390,11 +450,17 @@ onMounted(async () => {
   
   // Update SOL price every 7 seconds
   solPriceInterval = setInterval(updateSolPrice, 7000)
+  
+  // Update current time every second for streaming period
+  timeUpdateInterval = setInterval(() => {
+    currentTime.value = Date.now()
+  }, 1000)
 })
 
 onUnmounted(() => {
   if (statusInterval) clearInterval(statusInterval)
   if (solPriceInterval) clearInterval(solPriceInterval)
+  if (timeUpdateInterval) clearInterval(timeUpdateInterval)
 })
 
 const processSvg = (svg: string, sizeClass: string = 'w-4 h-4') => {
