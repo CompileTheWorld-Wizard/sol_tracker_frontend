@@ -1119,7 +1119,7 @@ const toggleTracking = async () => {
       
       // Poll status API to check if stream has actually stopped
       let attempts = 0
-      const maxAttempts = 30 // 30 seconds max (30 * 1 second)
+      const maxAttempts = 3000 // 30 seconds max (30 * 1 second)
       
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
