@@ -927,9 +927,9 @@ const formatCellValue = (key: string, item: any): string => {
       return value ? '✅ Yes' : '❌ No'
     }
     
-    // Handle sell percentages
-    if (sellField.includes('Percent') || sellField === 'firstSellPNL') {
-      return typeof value === 'number' ? `${value.toFixed(2)}%` : String(value)
+    // Handle sell percentages and PNL
+    if (sellField.includes('Percent') || sellField === 'firstSellPNL' || sellField === 'profitAtSell') {
+      return typeof value === 'number' ? value.toFixed(2) : String(value)
     }
     
     // Handle sell numbers
@@ -994,19 +994,19 @@ const formatCellValue = (key: string, item: any): string => {
     }
   }
   
-  // Handle percentages
-  if (key.includes('Percent') || key.includes('%')) {
-    if (typeof value === 'number') {
-      return `${value.toFixed(2)}%`
-    }
-    return String(value)
-  }
-  
   // Handle numbers
   if (typeof value === 'number') {
     // For position values, show as integers without decimals
     if (key === 'walletBuyPositionAfterDev') {
       return Math.round(value).toString()
+    }
+    // For pnlSOL, use 9 decimal places without removing trailing zeros
+    if (key === 'pnlSOL') {
+      return value.toFixed(9)
+    }
+    // For percentage fields, use 2 decimal places without % symbol
+    if (key.includes('Percent') || key === 'pnlPercent') {
+      return value.toFixed(2)
     }
     // For very small numbers (like prices), use more decimal places
     if (Math.abs(value) > 0 && Math.abs(value) < 0.01) {
