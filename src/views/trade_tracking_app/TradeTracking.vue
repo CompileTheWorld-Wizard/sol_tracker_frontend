@@ -72,101 +72,6 @@
         </div>
       </div>
 
-      <!-- Whitelist Configuration -->
-      <div class="bg-gray-900/50 border border-gray-800 rounded-lg p-2 mb-2">
-        <div 
-          @click="whitelistExpanded = !whitelistExpanded"
-          class="flex justify-between items-center cursor-pointer mb-1.5"
-        >
-          <h3 class="text-xs font-semibold text-gray-300">✅ Whitelist (Track Specific Addresses)</h3>
-          <span class="text-gray-400 text-xs">{{ whitelistExpanded ? '▼' : '▶' }}</span>
-        </div>
-        <div v-show="whitelistExpanded" class="mt-2">
-          <p class="text-xs text-gray-500 mb-2">
-            Add addresses to track with custom time periods. You can specify when to start tracking and for how long.
-          </p>
-          <div class="space-y-2 mb-2">
-            <!-- Address Input -->
-            <input
-              v-model="newWhitelistAddress"
-              type="text"
-              placeholder="Solana address..."
-              class="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            
-            <!-- Date and Period Selection Row -->
-            <div class="flex gap-1.5">
-              <div class="flex-1">
-                <label class="text-xs text-gray-400 mb-0.5 block">Start Tracking Date</label>
-                <input
-                  v-model="newWhitelistStartDate"
-                  type="datetime-local"
-                  class="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div class="w-24">
-                <label class="text-xs text-gray-400 mb-0.5 block">Period</label>
-                <input
-                  v-model.number="newWhitelistPeriodValue"
-                  type="number"
-                  min="1"
-                  placeholder="1"
-                  class="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div class="w-24">
-                <label class="text-xs text-gray-400 mb-0.5 block">Unit</label>
-                <select
-                  v-model="newWhitelistPeriodUnit"
-                  class="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                  <option value="months">Months</option>
-                </select>
-              </div>
-              
-              <div class="flex items-end">
-                <button
-                  @click="addWhitelistAddress"
-                  class="px-2 py-1 bg-gradient-to-r from-green-600 to-green-700 text-white rounded font-semibold text-xs hover:from-green-500 hover:to-green-600 transition"
-                >
-                  ➕ Add
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Whitelist Address List -->
-          <div class="space-y-1.5">
-            <div
-              v-for="(item, index) in whitelistAddresses"
-              :key="index"
-              class="px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-xs text-gray-200 flex items-center justify-between gap-2"
-            >
-              <div class="flex-1 font-mono break-all">
-                <span class="text-blue-400">{{ item.token_address }}</span>
-              </div>
-              <div class="flex items-center gap-2 text-gray-400 whitespace-nowrap">
-                <span class="text-xs">📅 {{ formatDate(item.start_track_datetime) }}</span>
-                <span class="text-xs">⏱️ {{ item.period }} {{ item.unit }}</span>
-                <span v-if="item.is_active !== undefined" :class="['text-xs', item.is_active ? 'text-green-400' : 'text-gray-500']">
-                  {{ item.is_active ? '✓ Active' : '○ Expired' }}
-                </span>
-                <button
-                  @click="removeWhitelistAddress(index)"
-                  class="text-red-400 hover:text-red-300 text-xs ml-1"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Skip Tokens Configuration -->
       <div class="bg-gray-900/50 border border-gray-800 rounded-lg p-2 mb-2">
         <div 
@@ -340,9 +245,7 @@ import {
   fetchSkipTokens,
   addSkipToken as addSkipTokenAPI,
   removeSkipToken as removeSkipTokenAPI,
-  fetchSolPrice,
-  addToWhitelist as addToWhitelistAPI,
-  removeFromWhitelist as removeFromWhitelistAPI
+  fetchSolPrice
 } from '../../services/tradeTracking'
 import { logout } from '../../services/auth'
 import DashboardTab from './DashboardTab.vue'
@@ -370,24 +273,6 @@ const showPasswordModal = ref(false)
 const streamingStartTime = ref<number | null>(null)
 const currentTime = ref(Date.now())
 
-// Whitelist state
-const whitelistExpanded = ref(false)
-const whitelistAddresses = ref<Array<{
-  id?: number
-  token_address: string
-  start_track_datetime: string
-  period: number
-  unit: string
-  end_track_datetime?: string
-  is_active?: boolean
-  created_at?: string
-  updated_at?: string
-}>>([])
-const newWhitelistAddress = ref('')
-const newWhitelistStartDate = ref('')
-const newWhitelistPeriodValue = ref(7)
-const newWhitelistPeriodUnit = ref<string>('days')
-
 let statusInterval: NodeJS.Timeout | null = null
 let solPriceInterval: NodeJS.Timeout | null = null
 let timeUpdateInterval: NodeJS.Timeout | null = null
@@ -399,11 +284,6 @@ const loadStatus = async () => {
     addresses.value = result.data.addresses || []
     trackedAddresses.value = addresses.value.length
     totalTransactions.value = result.data.totalTransactions || 0
-    
-    // Load whitelist from status response
-    if (result.data.whitelist && Array.isArray(result.data.whitelist)) {
-      whitelistAddresses.value = result.data.whitelist
-    }
     
     // Set streaming start time from API response
     if (result.data.startedTime) {
@@ -528,7 +408,7 @@ const handleStartTracking = async () => {
     alert('Failed to start tracking: ' + startResult.error)
   }
 }
-// Stop tracking
+
 const handleStopTracking = async () => {
   const result = await stopTracking()
   if (result.success) {
@@ -562,85 +442,10 @@ const removeSkipToken = async (mintAddress: string) => {
   }
 }
 
-// Whitelist management functions
-const addWhitelistAddress = async () => {
-  const address = newWhitelistAddress.value.trim()
-  if (!address) {
-    alert('Please enter an address')
-    return
-  }
-  
-  if (address.length < 32 || address.length > 44) {
-    alert('Invalid Solana address format')
-    return
-  }
-  
-  if (whitelistAddresses.value.some(item => item.token_address === address)) {
-    alert('Address already in whitelist')
-    return
-  }
-  
-  if (!newWhitelistStartDate.value) {
-    alert('Please select a start date')
-    return
-  }
-  
-  if (!newWhitelistPeriodValue.value || newWhitelistPeriodValue.value < 1) {
-    alert('Please enter a valid period value')
-    return
-  }
-  
-  // Convert datetime-local to ISO 8601 format
-  const startDatetime = new Date(newWhitelistStartDate.value).toISOString()
-  
-  const result = await addToWhitelistAPI(
-    address,
-    startDatetime,
-    newWhitelistPeriodValue.value,
-    newWhitelistPeriodUnit.value
-  )
-  
-  if (result.success) {
-    // Reload status to get updated whitelist
-    await loadStatus()
-    
-    // Reset form
-    newWhitelistAddress.value = ''
-    newWhitelistStartDate.value = ''
-    newWhitelistPeriodValue.value = 7
-    newWhitelistPeriodUnit.value = 'days'
-  } else {
-    alert('Failed to add to whitelist: ' + result.error)
-  }
-}
-
-const removeWhitelistAddress = async (index: number) => {
-  const item = whitelistAddresses.value[index]
-  const result = await removeFromWhitelistAPI(item.token_address)
-  
-  if (result.success) {
-    // Reload status to get updated whitelist
-    await loadStatus()
-  } else {
-    alert('Failed to remove from whitelist: ' + result.error)
-  }
-}
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 onMounted(async () => {
   await Promise.all([loadStatus(), loadSkipTokens(), updateSolPrice()])
   
-  // Update status every 10 seconds (this will also refresh whitelist)
+  // Update status every 10 seconds
   statusInterval = setInterval(loadStatus, 10000)
   
   // Update SOL price every 7 seconds
