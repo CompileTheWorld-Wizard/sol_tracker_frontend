@@ -1166,7 +1166,7 @@ const exportDashboard = async () => {
 }
 
 const exportAllWallets = async () => {
-  alert('Export all wallets feature coming soon')
+  alert('Export all wallets feature coming soon!!')
 }
 
 const removeWallet = async () => {
