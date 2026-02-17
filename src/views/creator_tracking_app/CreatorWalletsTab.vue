@@ -2847,25 +2847,39 @@ const addToWhitelist = async () => {
     alert('No wallets to add. Please apply Master Live filters first.')
     return
   }
-  
-  const message = `Add all wallets matching Master Live filters to whitelist?\n\nCurrently showing: ${count} wallet${count > 1 ? 's' : ''}`
-  
-  if (confirm(message)) {
-    try {
-      const result = await addWalletsToWhitelist(currentFilters)
+    
+  try {
+    const result = await addWalletsToWhitelist(currentFilters)
+    
+    if (result.success) {
+      // Analyze results and create detailed message
+      const parts = []
       
-      if (result.success) {
-        const addedMsg = `Successfully added ${result.added} wallet${result.added > 1 ? 's' : ''} to whitelist!`
-        const skippedMsg = result.skipped ? `\n${result.skipped} wallet${result.skipped > 1 ? 's were' : ' was'} already whitelisted.` : ''
-        alert(addedMsg + skippedMsg)
-      } else {
-        alert(result.message || 'Failed to add wallets to whitelist')
+      parts.push(`✓ Total wallets found: ${result.totalFound}`)
+      
+      if (result.addedCount > 0) {
+        parts.push(`✓ Added to whitelist: ${result.addedCount} new wallet${result.addedCount > 1 ? 's' : ''}`)
       }
-    } catch (error: any) {
-      console.error('Error adding wallets to whitelist:', error)
-      alert(`Failed to add wallets to whitelist: ${error.message}`)
+      
+      if (result.alreadyExisted > 0) {
+        parts.push(`• Already whitelisted: ${result.alreadyExisted} wallet${result.alreadyExisted > 1 ? 's' : ''}`)
+      }
+      
+      if (result.addedCount === 0 && result.alreadyExisted === result.totalFound) {
+        parts.push('\nAll matching wallets were already in the whitelist.')
+      } else if (result.addedCount > 0) {
+        parts.push('\n✓ Whitelist updated successfully!')
+      }
+      
+      alert(parts.join('\n'))
+    } else {
+      alert(result.message || 'Failed to add wallets to whitelist')
     }
+  } catch (error: any) {
+    console.error('Error adding wallets to whitelist:', error)
+    alert(`Failed to add wallets to whitelist: ${error.message}`)
   }
+  
 }
 
 // Apply filters

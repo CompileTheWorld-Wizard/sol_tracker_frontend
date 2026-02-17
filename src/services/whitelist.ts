@@ -7,8 +7,11 @@ export interface WhitelistWallet {
 
 export interface AddToWhitelistResponse {
   success: boolean;
-  added: number;
-  skipped?: number;
+  addedCount: number;
+  alreadyExisted: number;
+  totalFound: number;
+  presetId?: string;
+  presetName?: string;
   message?: string;
 }
 
