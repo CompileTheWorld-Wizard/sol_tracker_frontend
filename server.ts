@@ -402,7 +402,7 @@ const getBackendTarget = (req: express.Request): string | null => {
   if (path.startsWith('/stream') || 
       path.startsWith('/settings') || 
       path.startsWith('/filter-presets') ||
-      path.startsWith('/creators')) {
+      path.startsWith('/whitelist')) {
     return `http://127.0.0.1:${CREATOR_TRACKER_PORT}`;
   }
   

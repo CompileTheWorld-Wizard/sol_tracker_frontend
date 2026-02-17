@@ -145,6 +145,13 @@
           >
             Save as Master Live
           </button>
+          <button
+            v-if="isMasterLiveSelected"
+            @click="addToWhitelist"
+            class="px-2 py-1 text-xs bg-yellow-600/90 hover:bg-yellow-600 text-white font-semibold rounded transition"
+          >
+            Add to Whitelist
+          </button>
         </div>
 
         <!-- Active Filters Widgets -->
@@ -2028,6 +2035,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, type PaginationInfo, type ReceiverWallet } from '../../services/creatorWallets'
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
 import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
+import { addWalletsToWhitelist } from '../../services/whitelist'
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
@@ -2709,6 +2717,13 @@ const activeFilterCount = computed(() => {
   return count
 })
 
+// Check if Master Live preset is currently selected
+const isMasterLiveSelected = computed(() => {
+  if (!selectedFilterPreset.value) return false
+  const preset = filterPresets.value.find(p => p.id === selectedFilterPreset.value)
+  return preset?.name === 'Master Live'
+})
+
 // Load filter preset
 const loadFilterPreset = () => {
   if (!selectedFilterPreset.value) return
@@ -2816,6 +2831,37 @@ const removeFilterPreset = async () => {
     } catch (error: any) {
       console.error('Error removing preset:', error)
       alert(`Failed to remove preset: ${error.message}`)
+    }
+  }
+}
+
+// Add filtered wallets to whitelist
+const addToWhitelist = async () => {
+  // Get all currently displayed wallets (filtered results)
+  const walletAddresses = wallets.value.map(w => w.address)
+  
+  if (walletAddresses.length === 0) {
+    alert('No wallets to add. Please apply filters first.')
+    return
+  }
+  
+  const count = walletAddresses.length
+  const message = `Add ${count} wallet${count > 1 ? 's' : ''} from Master Live to whitelist?`
+  
+  if (confirm(message)) {
+    try {
+      const result = await addWalletsToWhitelist(walletAddresses)
+      
+      if (result.success) {
+        const addedMsg = `Successfully added ${result.added} wallet${result.added > 1 ? 's' : ''} to whitelist!`
+        const skippedMsg = result.skipped ? `\n${result.skipped} wallet${result.skipped > 1 ? 's were' : ' was'} already whitelisted.` : ''
+        alert(addedMsg + skippedMsg)
+      } else {
+        alert(result.message || 'Failed to add wallets to whitelist')
+      }
+    } catch (error: any) {
+      console.error('Error adding wallets to whitelist:', error)
+      alert(`Failed to add wallets to whitelist: ${error.message}`)
     }
   }
 }
