@@ -109,23 +109,26 @@
           <select
             v-model="selectedFilterPreset"
             @change="loadFilterPreset"
-            class="px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            :disabled="loadingPresets"
+            class="px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">-- Select Preset --</option>
+            <option value="">{{ loadingPresets ? 'Loading...' : '-- Select Preset --' }}</option>
             <option v-for="preset in filterPresets" :key="preset.id" :value="preset.id">
               {{ preset.name }}
             </option>
           </select>
           <button
             @click="showSavePresetDialog = true"
-            class="px-2 py-1 text-xs bg-blue-600/90 hover:bg-blue-600 text-white font-semibold rounded transition"
+            :disabled="loadingPresets"
+            class="px-2 py-1 text-xs bg-blue-600/90 hover:bg-blue-600 text-white font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Preset
           </button>
           <button
             v-if="selectedFilterPreset"
             @click="removeFilterPreset"
-            class="px-2 py-1 text-xs bg-red-600/90 hover:bg-red-600 text-white font-semibold rounded transition"
+            :disabled="loadingPresets"
+            class="px-2 py-1 text-xs bg-red-600/90 hover:bg-red-600 text-white font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Remove Preset
           </button>
@@ -134,6 +137,13 @@
             class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold rounded transition"
           >
             Clear All
+          </button>
+          <button
+            @click="saveAsMasterLive"
+            :disabled="loadingPresets"
+            class="px-2 py-1 text-xs bg-green-600/90 hover:bg-green-600 text-white font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Save as Master Live
           </button>
         </div>
 
@@ -2017,6 +2027,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, type PaginationInfo, type ReceiverWallet } from '../../services/creatorWallets'
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
+import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
@@ -2110,12 +2121,15 @@ interface FilterPreset {
   id: string
   name: string
   filters: any
+  createdAt?: string
+  updatedAt?: string
 }
 
 const filterPresets = ref<FilterPreset[]>([])
 const selectedFilterPreset = ref<string>('')
 const showSavePresetDialog = ref(false)
 const newPresetName = ref('')
+const loadingPresets = ref(false)
 
 interface Filters {
   totalTokens: { min?: number; max?: number }
@@ -2172,24 +2186,17 @@ const filters = ref<Filters>({
   multiplierScores: []
 })
 
-// Load filter presets from localStorage
-const loadFilterPresets = () => {
+// Load filter presets from backend
+const loadFilterPresets = async () => {
   try {
-    const stored = localStorage.getItem('creatorWalletFilterPresets')
-    if (stored) {
-      filterPresets.value = JSON.parse(stored)
-    }
+    loadingPresets.value = true
+    const presets = await getFilterPresets()
+    filterPresets.value = presets
   } catch (e) {
     console.error('Error loading filter presets:', e)
-  }
-}
-
-// Save filter presets to localStorage
-const saveFilterPresets = () => {
-  try {
-    localStorage.setItem('creatorWalletFilterPresets', JSON.stringify(filterPresets.value))
-  } catch (e) {
-    console.error('Error saving filter presets:', e)
+    alert('Failed to load filter presets from server')
+  } finally {
+    loadingPresets.value = false
   }
 }
 
@@ -2730,35 +2737,85 @@ const loadFilterPreset = () => {
 }
 
 // Save filter preset
-const saveFilterPreset = () => {
+const saveFilterPreset = async () => {
   if (!newPresetName.value.trim()) {
     alert('Please enter a preset name')
     return
   }
-  const newPreset: FilterPreset = {
-    id: Date.now().toString(),
-    name: newPresetName.value.trim(),
-    filters: JSON.parse(JSON.stringify(filters.value))
+  
+  try {
+    const newPreset = await createFilterPreset(
+      Date.now().toString(),
+      newPresetName.value.trim(),
+      JSON.parse(JSON.stringify(filters.value))
+    )
+    
+    filterPresets.value.push(newPreset)
+    selectedFilterPreset.value = newPreset.id
+    newPresetName.value = ''
+    showSavePresetDialog.value = false
+  } catch (error: any) {
+    console.error('Error saving preset:', error)
+    alert(`Failed to save preset: ${error.message}`)
   }
-  filterPresets.value.push(newPreset)
-  saveFilterPresets()
-  selectedFilterPreset.value = newPreset.id
-  newPresetName.value = ''
-  showSavePresetDialog.value = false
+}
+
+// Save as Master Live without dialog
+const saveAsMasterLive = async () => {
+  const masterLiveName = 'Master Live'
+  
+  try {
+    // Check if Master Live preset already exists
+    const existingPreset = filterPresets.value.find(p => p.name === masterLiveName)
+    
+    if (existingPreset) {
+      // Update existing Master Live preset
+      const updatedPreset = await updateFilterPreset(existingPreset.id, {
+        filters: JSON.parse(JSON.stringify(filters.value))
+      })
+      
+      // Update in local array
+      const index = filterPresets.value.findIndex(p => p.id === existingPreset.id)
+      if (index !== -1) {
+        filterPresets.value[index] = updatedPreset
+      }
+      selectedFilterPreset.value = updatedPreset.id
+    } else {
+      // Create new Master Live preset
+      const newPreset = await createFilterPreset(
+        Date.now().toString(),
+        masterLiveName,
+        JSON.parse(JSON.stringify(filters.value))
+      )
+      
+      filterPresets.value.push(newPreset)
+      selectedFilterPreset.value = newPreset.id
+    }
+  } catch (error: any) {
+    console.error('Error saving Master Live preset:', error)
+    alert(`Failed to save Master Live preset: ${error.message}`)
+  }
 }
 
 // Remove filter preset
-const removeFilterPreset = () => {
+const removeFilterPreset = async () => {
   if (!selectedFilterPreset.value) return
   
   if (confirm('Are you sure you want to remove this preset?')) {
-    const index = filterPresets.value.findIndex(p => p.id === selectedFilterPreset.value)
-    if (index !== -1) {
-      filterPresets.value.splice(index, 1)
-      saveFilterPresets()
+    try {
+      await deleteFilterPreset(selectedFilterPreset.value)
+      
+      const index = filterPresets.value.findIndex(p => p.id === selectedFilterPreset.value)
+      if (index !== -1) {
+        filterPresets.value.splice(index, 1)
+      }
+      
       selectedFilterPreset.value = ''
       // Clear filters when preset is removed
       clearFilters()
+    } catch (error: any) {
+      console.error('Error removing preset:', error)
+      alert(`Failed to remove preset: ${error.message}`)
     }
   }
 }
@@ -3331,7 +3388,7 @@ const handleExport = async () => {
 }
 
 onMounted(async () => {
-  loadFilterPresets()
+  await loadFilterPresets()
   await loadScoringSettings()
   await loadWallets()
 })

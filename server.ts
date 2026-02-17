@@ -390,6 +390,8 @@ const forwardRequest = async (req: express.Request, res: express.Response, targe
 const getBackendTarget = (req: express.Request): string | null => {
   const path = req.path; // This will be like '/settings/applied/get', not '/api/settings/applied/get'
   const method = req.method.toUpperCase();
+
+  console.log('path', path);
   
   // Fund Tracker routes (must come first to avoid conflicts)
   if (path.startsWith('/sol-transfers') || path.startsWith('/tracking')) {
@@ -399,7 +401,8 @@ const getBackendTarget = (req: express.Request): string | null => {
   // Creator Tracker specific routes
   if (path.startsWith('/stream') || 
       path.startsWith('/settings') || 
-      path.startsWith('/database')) {
+      path.startsWith('/filter-presets') ||
+      path.startsWith('/creators')) {
     return `http://127.0.0.1:${CREATOR_TRACKER_PORT}`;
   }
   
@@ -411,7 +414,7 @@ const getBackendTarget = (req: express.Request): string | null => {
   
   // Creator Tracker token routes (generic /tokens)
   // This includes: /tokens, /tokens/creators/analytics, /tokens/creators/list, etc.
-  if (path.startsWith('/tokens')) {
+  if (path.startsWith('/tokens') || path.startsWith('/creators')) {
     return `http://127.0.0.1:${CREATOR_TRACKER_PORT}`;
   }
   
@@ -499,6 +502,19 @@ app.use('/api', (req, res, next) => {
     // Note: req.path has '/api' stripped by Express
     // Backend services expect paths WITHOUT /api prefix, so pass as-is
     await forwardRequest(req, res, target, req.path);
+  });
+});
+
+// Handle /creator-api routes - forward directly to creator tracker
+app.use('/creator-api', (req, res, _next) => {
+  
+  console.log('creator-api route', req.path);
+
+  requireAuth(req, res, async () => {
+    // req.path is stripped of /creator-api prefix by Express
+    // So /creator-api/filter-presets becomes /filter-presets in req.path
+    // Pass path as-is to backend (no /api prefix needed)
+    await forwardRequest(req, res, `http://127.0.0.1:${CREATOR_TRACKER_PORT}`, req.path);
   });
 });
 
