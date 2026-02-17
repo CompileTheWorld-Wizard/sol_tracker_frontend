@@ -2837,20 +2837,22 @@ const removeFilterPreset = async () => {
 
 // Add filtered wallets to whitelist
 const addToWhitelist = async () => {
-  // Get all currently displayed wallets (filtered results)
-  const walletAddresses = wallets.value.map(w => w.address)
+  // Get the current Master Live filters
+  const currentFilters = JSON.parse(JSON.stringify(filters.value))
   
-  if (walletAddresses.length === 0) {
-    alert('No wallets to add. Please apply filters first.')
+  // Count currently displayed wallets for confirmation
+  const count = wallets.value.length
+  
+  if (count === 0) {
+    alert('No wallets to add. Please apply Master Live filters first.')
     return
   }
   
-  const count = walletAddresses.length
-  const message = `Add ${count} wallet${count > 1 ? 's' : ''} from Master Live to whitelist?`
+  const message = `Add all wallets matching Master Live filters to whitelist?\n\nCurrently showing: ${count} wallet${count > 1 ? 's' : ''}`
   
   if (confirm(message)) {
     try {
-      const result = await addWalletsToWhitelist(walletAddresses)
+      const result = await addWalletsToWhitelist(currentFilters)
       
       if (result.success) {
         const addedMsg = `Successfully added ${result.added} wallet${result.added > 1 ? 's' : ''} to whitelist!`

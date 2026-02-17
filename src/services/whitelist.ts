@@ -12,15 +12,16 @@ export interface AddToWhitelistResponse {
   message?: string;
 }
 
-// Add wallets to whitelist
-export async function addWalletsToWhitelist(addresses: string[]): Promise<AddToWhitelistResponse> {
+// Add wallets to whitelist based on Master Live filters
+// Backend will query wallets using the provided filters
+export async function addWalletsToWhitelist(filters: any): Promise<AddToWhitelistResponse> {
   const response = await fetch(`${API_BASE_URL}/wallets/whitelist`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ addresses }),
+    body: JSON.stringify({ filters }),
   });
 
   if (!response.ok) {
