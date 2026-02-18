@@ -215,12 +215,24 @@
           >
             Tokens
           </button>
+          <button
+            @click="activeTab = 'whitelist'"
+            :class="[
+              'px-4 py-2 text-sm font-semibold transition',
+              activeTab === 'whitelist'
+                ? 'text-purple-400 border-b-2 border-purple-400'
+                : 'text-gray-400 hover:text-gray-300'
+            ]"
+          >
+            Whitelist
+          </button>
         </div>
       </div>
 
       <!-- Tab Content -->
       <CreatorWalletsTab v-if="activeTab === 'creator-wallets'" ref="creatorWalletsTabRef" @data-updated="handleDataUpdated" @update-total="tokensTotalCount = $event" />
-      <TokensTab v-else ref="tokensTabRef" @select-token="selectedToken = $event" @update-total="tokensTotalCount = $event" @data-updated="handleDataUpdated" />
+      <TokensTab v-else-if="activeTab === 'tokens'" ref="tokensTabRef" @select-token="selectedToken = $event" @update-total="tokensTotalCount = $event" @data-updated="handleDataUpdated" />
+      <WhitelistTab v-else-if="activeTab === 'whitelist'" />
     </main>
 
     <!-- Manage Blacklist Dialog -->
@@ -790,6 +802,7 @@ import { startStream, stopStream, getStreamStatus } from '../../services/stream'
 import { getCreatorWalletsFromTokens, getAthMcapStats, getAvgStats, type Token } from '../../services/tokens'
 import CreatorWalletsTab from './CreatorWalletsTab.vue'
 import TokensTab from './TokensTab.vue'
+import WhitelistTab from './WhitelistTab.vue'
 // Import SVG files as raw strings
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
@@ -804,7 +817,7 @@ import logoutIconSvg from '../../icons/logout.svg?raw'
 
 const router = useRouter()
 
-const activeTab = ref<'creator-wallets' | 'tokens'>('creator-wallets')
+const activeTab = ref<'creator-wallets' | 'tokens' | 'whitelist'>('creator-wallets')
 const tokensTotalCount = ref<number>(0)
 const avgAthMcap = ref<number | null>(null)
 const medianAthMcap = ref<number | null>(null)

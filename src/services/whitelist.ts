@@ -16,9 +16,81 @@ export interface AddToWhitelistResponse {
 }
 
 // Add wallets to whitelist based on Master Live filters
-// Backend will query wallets using the provided filters
-export async function addWalletsToWhitelist(filters: any): Promise<AddToWhitelistResponse> {
-  const response = await fetch(`${API_BASE_URL}/wallets/whitelist`, {
+export async function addWalletsToWhitelistTire1(filters: any): Promise<AddToWhitelistResponse> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire1`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ filters }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+    if (response.status === 405 || response.status === 404) {
+      throw new Error('Backend API not yet implemented. Please set up the whitelist router on the Creator Tracker backend.');
+    }
+    try {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to add wallets to whitelist');
+    } catch (e) {
+      throw new Error('Failed to add wallets to whitelist');
+    }
+  }
+
+  return await response.json();
+}
+
+// Add a single wallet address to whitelist
+export async function addWalletToWhitelistTire1(address: string): Promise<{ success: boolean; message?: string }> {
+  const trimmed = address.trim();
+  if (!trimmed) throw new Error('Wallet address is required');
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire1`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addresses: trimmed }),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Unauthorized');
+    try {
+      const err = await response.json();
+      throw new Error(err.error || err.message || 'Failed to add wallet');
+    } catch (e: any) {
+      if (e.message && !e.message.includes('Failed to add')) throw e;
+      throw new Error('Failed to add wallet to Tier 1 whitelist');
+    }
+  }
+  return await response.json();
+}
+
+export async function addWalletToWhitelistTire2(address: string): Promise<{ success: boolean; message?: string }> {
+  const trimmed = address.trim();
+  if (!trimmed) throw new Error('Wallet address is required');
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire2`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addresses: trimmed }),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Unauthorized');
+    try {
+      const err = await response.json();
+      throw new Error(err.error || err.message || 'Failed to add wallet');
+    } catch (e: any) {
+      if (e.message && !e.message.includes('Failed to add')) throw e;
+      throw new Error('Failed to add wallet to Tier 2 whitelist');
+    }
+  }
+  return await response.json();
+}
+
+export async function addWalletsToWhitelistTire2(filters: any): Promise<AddToWhitelistResponse> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire2`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -46,8 +118,8 @@ export async function addWalletsToWhitelist(filters: any): Promise<AddToWhitelis
 }
 
 // Get all whitelisted wallets
-export async function getWhitelistedWallets(): Promise<WhitelistWallet[]> {
-  const response = await fetch(`${API_BASE_URL}/whitelist`, {
+export async function getWhitelistedWalletsTire1(): Promise<WhitelistWallet[]> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire1`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -71,14 +143,19 @@ export async function getWhitelistedWallets(): Promise<WhitelistWallet[]> {
     }
   }
 
-  const data = await response.json();
-  return data.wallets || [];
+  const json = await response.json();
+  const raw = json.data ?? json.wallets ?? [];
+  return Array.isArray(raw)
+    ? raw.map((item: { walletAddress?: string; address?: string; updatedAt?: string; addedAt?: string }) => ({
+        address: item.walletAddress ?? item.address ?? '',
+        addedAt: item.updatedAt ?? item.addedAt,
+      }))
+    : [];
 }
 
-// Remove wallet from whitelist
-export async function removeFromWhitelist(address: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/${encodeURIComponent(address)}`, {
-    method: 'DELETE',
+export async function getWhitelistedWalletsTire2(): Promise<WhitelistWallet[]> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire2`, {
+    method: 'GET',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
@@ -90,44 +167,149 @@ export async function removeFromWhitelist(address: string): Promise<void> {
       throw new Error('Unauthorized');
     }
     if (response.status === 405 || response.status === 404) {
-      throw new Error('Backend API not yet implemented. Please set up the whitelist router on the Creator Tracker backend.');
+      console.warn('Whitelist endpoint not yet implemented on backend. Returning empty array.');
+      return [];
     }
     try {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to remove wallet from whitelist');
+      throw new Error(error.error || 'Failed to fetch whitelisted wallets');
     } catch (e) {
+      throw new Error('Failed to fetch whitelisted wallets');
+    }
+  }
+
+  const json = await response.json();
+  const raw = json.data ?? json.wallets ?? [];
+  return Array.isArray(raw)
+    ? raw.map((item: { walletAddress?: string; address?: string; updatedAt?: string; addedAt?: string }) => ({
+        address: item.walletAddress ?? item.address ?? '',
+        addedAt: item.updatedAt ?? item.addedAt,
+      }))
+    : [];
+}
+
+// Search tire1 by wallet address (GET /tire1/:address)
+export async function getWhitelistWalletByAddressTire1(address: string): Promise<{ found: boolean; data?: WhitelistWallet }> {
+  const trimmed = address.trim();
+  if (!trimmed) return { found: false };
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire1/${encodeURIComponent(trimmed)}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (response.status === 404) {
+    await response.json().catch(() => ({}));
+    return { found: false };
+  }
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Unauthorized');
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || err.message || 'Failed to search Tier 1 whitelist');
+  }
+  const json = await response.json();
+  if (!json.found || !json.data) return { found: false };
+  const d = json.data;
+  return {
+    found: true,
+    data: {
+      address: d.walletAddress ?? d.address ?? '',
+      addedAt: d.updatedAt ?? d.addedAt,
+    },
+  };
+}
+
+// Search tire2 by wallet address (GET /tire2/:address)
+export async function getWhitelistWalletByAddressTire2(address: string): Promise<{ found: boolean; data?: WhitelistWallet }> {
+  const trimmed = address.trim();
+  if (!trimmed) return { found: false };
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire2/${encodeURIComponent(trimmed)}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (response.status === 404) {
+    await response.json().catch(() => ({}));
+    return { found: false };
+  }
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Unauthorized');
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || err.message || 'Failed to search Tier 2 whitelist');
+  }
+  const json = await response.json();
+  if (!json.found || !json.data) return { found: false };
+  const d = json.data;
+  return {
+    found: true,
+    data: {
+      address: d.walletAddress ?? d.address ?? '',
+      addedAt: d.updatedAt ?? d.addedAt,
+    },
+  };
+}
+
+// Remove wallet(s) from whitelist - API expects DELETE with body { addresses: string | string[] }
+export async function removeFromWhitelistTire1(address: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire1`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addresses: address }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (response.status === 400) {
+      try {
+        const err = await response.json();
+        throw new Error(err.error || 'Invalid request');
+      } catch (e: any) {
+        if (e.message && e.message !== 'Invalid request') throw e;
+        throw new Error('Addresses are required');
+      }
+    }
+    try {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to remove wallet from whitelist');
+    } catch (e: any) {
+      if (e.message) throw e;
       throw new Error('Failed to remove wallet from whitelist');
     }
   }
 }
 
-// Check if wallet is whitelisted
-export async function isWhitelisted(address: string): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/${encodeURIComponent(address)}/check`, {
-    method: 'GET',
+export async function removeFromWhitelistTire2(address: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/tire2`, {
+    method: 'DELETE',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addresses: address }),
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      return false;
+    if (response.status === 401) throw new Error('Unauthorized');
+    if (response.status === 400) {
+      try {
+        const err = await response.json();
+        throw new Error(err.error || 'Invalid request');
+      } catch (e: any) {
+        if (e.message && e.message !== 'Invalid request') throw e;
+        throw new Error('Addresses are required');
+      }
     }
-    if (response.status === 401) {
-      throw new Error('Unauthorized');
+    try {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to remove wallet from whitelist');
+    } catch (e: any) {
+      if (e.message) throw e;
+      throw new Error('Failed to remove wallet from whitelist');
     }
-    return false;
   }
-
-  const data = await response.json();
-  return data.whitelisted || false;
 }
 
 // Migrate whitelist - check and update whitelist data
 export async function migrateWhitelist(): Promise<any> {
-  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/migrate`, {
+  const response = await fetch(`${API_BASE_URL}/whitelist/migrate`, {
     method: 'POST',
     credentials: 'include',
     headers: {

@@ -324,7 +324,7 @@ const forwardRequest = async (req: express.Request, res: express.Response, targe
     };
     
     // Add request body if present
-    if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+    if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'GET' || req.method === 'DELETE')) {
       axiosConfig.data = req.body;
     }
     
@@ -491,6 +491,17 @@ app.use('/api', (req, res, next) => {
   
   // Check authentication before forwarding to backend services
   requireAuth(req, res, async (): Promise<void> => {
+    // Log payload for debugging (method, path, query, body)
+    const payload: Record<string, unknown> = {
+      method: req.method,
+      path: req.path,
+      query: Object.keys(req.query).length ? req.query : undefined,
+    };
+    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+      payload.body = req.body;
+    }
+    console.log('[API] Request payload:', JSON.stringify(payload, null, 2));
+
     const target = getBackendTarget(req);
     
     if (!target) {
