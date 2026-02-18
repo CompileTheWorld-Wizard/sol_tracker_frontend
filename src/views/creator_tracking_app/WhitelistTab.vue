@@ -2,7 +2,7 @@
   <div class="w-full">
     <!-- Top: Migrate buttons -->
     <div class="mb-4 flex items-center justify-end gap-2">
-      <button
+      <!-- <button
         @click="migrateMainToRedis"
         :disabled="migratingMainToRedis || migratingRedisToMain"
         class="px-3 py-1.5 text-xs bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -15,7 +15,7 @@
         class="px-3 py-1.5 text-xs bg-purple-700/80 hover:bg-purple-600 text-purple-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {{ migratingRedisToMain ? 'Migrating...' : 'Check and Migrate from Redis to Postgres' }}
-      </button>
+      </button> -->
     </div>
     <!-- Two columns: Tier 1 (left) | Tier 2 (right) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
