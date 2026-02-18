@@ -146,6 +146,12 @@
             Save as Master Live
           </button>
           <button
+            @click="checkAndMigrate"
+            class="px-2 py-1 text-xs bg-blue-600/90 hover:bg-blue-600 text-white font-semibold rounded transition"
+          >
+            Check and Migrate
+          </button>
+          <button
             v-if="isMasterLiveSelected"
             @click="addToWhitelist"
             class="px-2 py-1 text-xs bg-yellow-600/90 hover:bg-yellow-600 text-white font-semibold rounded transition"
@@ -2035,7 +2041,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, type PaginationInfo, type ReceiverWallet } from '../../services/creatorWallets'
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
 import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
-import { addWalletsToWhitelist } from '../../services/whitelist'
+import { addWalletsToWhitelist, migrateWhitelist } from '../../services/whitelist'
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
@@ -2847,40 +2853,82 @@ const addToWhitelist = async () => {
     alert('No wallets to add. Please apply Master Live filters first.')
     return
   }
-    
-  try {
-    const result = await addWalletsToWhitelist(currentFilters)
-    
-    if (result.success) {
-      // Analyze results and create detailed message
-      const parts = []
-      
-      parts.push(`✓ Total wallets found: ${result.totalFound}`)
-      
-      if (result.addedCount > 0) {
-        parts.push(`✓ Added to whitelist: ${result.addedCount} new wallet${result.addedCount > 1 ? 's' : ''}`)
-      }
-      
-      if (result.alreadyExisted > 0) {
-        parts.push(`• Already whitelisted: ${result.alreadyExisted} wallet${result.alreadyExisted > 1 ? 's' : ''}`)
-      }
-      
-      if (result.addedCount === 0 && result.alreadyExisted === result.totalFound) {
-        parts.push('\nAll matching wallets were already in the whitelist.')
-      } else if (result.addedCount > 0) {
-        parts.push('\n✓ Whitelist updated successfully!')
-      }
-      
-      alert(parts.join('\n'))
-    } else {
-      alert(result.message || 'Failed to add wallets to whitelist')
-    }
-  } catch (error: any) {
-    console.error('Error adding wallets to whitelist:', error)
-    alert(`Failed to add wallets to whitelist: ${error.message}`)
-  }
   
+  const message = `Add all wallets matching Master Live filters to whitelist?\n\nCurrently showing: ${count} wallet${count > 1 ? 's' : ''}`
+  
+  if (confirm(message)) {
+    try {
+      const result = await addWalletsToWhitelist(currentFilters)
+      
+      if (result.success) {
+        // Analyze results and create detailed message
+        const parts = []
+        
+        parts.push(`✓ Total wallets found: ${result.totalFound}`)
+        
+        if (result.addedCount > 0) {
+          parts.push(`✓ Added to whitelist: ${result.addedCount} new wallet${result.addedCount > 1 ? 's' : ''}`)
+        }
+        
+        if (result.alreadyExisted > 0) {
+          parts.push(`• Already whitelisted: ${result.alreadyExisted} wallet${result.alreadyExisted > 1 ? 's' : ''}`)
+        }
+        
+        if (result.addedCount === 0 && result.alreadyExisted === result.totalFound) {
+          parts.push('\nAll matching wallets were already in the whitelist.')
+        } else if (result.addedCount > 0) {
+          parts.push('\n✓ Whitelist updated successfully!')
+        }
+        
+        alert(parts.join('\n'))
+      } else {
+        alert(result.message || 'Failed to add wallets to whitelist')
+      }
+    } catch (error: any) {
+      console.error('Error adding wallets to whitelist:', error)
+      alert(`Failed to add wallets to whitelist: ${error.message}`)
+    }
+  }
 }
+
+// Check and migrate whitelist
+const checkAndMigrate = async () => {
+  if (confirm('Check and migrate whitelist data?\n\nThis will verify and update the whitelist.')) {
+    try {
+      const result = await migrateWhitelist()
+      
+      // Display the migration results
+      if (result.success) {
+        const parts = []
+        
+        if (result.message) {
+          parts.push(result.message)
+        }
+        
+        // Add any additional result details
+        if (result.checked !== undefined) {
+          parts.push(`\n✓ Checked: ${result.checked} wallet${result.checked !== 1 ? 's' : ''}`)
+        }
+        
+        if (result.migrated !== undefined) {
+          parts.push(`✓ Migrated: ${result.migrated} wallet${result.migrated !== 1 ? 's' : ''}`)
+        }
+        
+        if (result.skipped !== undefined && result.skipped > 0) {
+          parts.push(`• Skipped: ${result.skipped} wallet${result.skipped !== 1 ? 's' : ''}`)
+        }
+        
+        alert(parts.join('\n') || 'Migration completed successfully!')
+      } else {
+        alert(result.message || 'Migration failed')
+      }
+    } catch (error: any) {
+      console.error('Error migrating whitelist:', error)
+      alert(`Failed to migrate whitelist: ${error.message}`)
+    }
+  }
+}
+
 
 // Apply filters
 const applyFilters = () => {

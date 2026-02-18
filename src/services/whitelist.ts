@@ -77,7 +77,7 @@ export async function getWhitelistedWallets(): Promise<WhitelistWallet[]> {
 
 // Remove wallet from whitelist
 export async function removeFromWhitelist(address: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/whitelist/${encodeURIComponent(address)}`, {
+  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/${encodeURIComponent(address)}`, {
     method: 'DELETE',
     credentials: 'include',
     headers: {
@@ -103,7 +103,7 @@ export async function removeFromWhitelist(address: string): Promise<void> {
 
 // Check if wallet is whitelisted
 export async function isWhitelisted(address: string): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/whitelist/${encodeURIComponent(address)}/check`, {
+  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/${encodeURIComponent(address)}/check`, {
     method: 'GET',
     credentials: 'include',
     headers: {
@@ -123,4 +123,32 @@ export async function isWhitelisted(address: string): Promise<boolean> {
 
   const data = await response.json();
   return data.whitelisted || false;
+}
+
+// Migrate whitelist - check and update whitelist data
+export async function migrateWhitelist(): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/wallets/whitelist/migrate`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+    if (response.status === 405 || response.status === 404) {
+      throw new Error('Backend API not yet implemented. Please set up the whitelist migrate endpoint on the Creator Tracker backend.');
+    }
+    try {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to migrate whitelist');
+    } catch (e) {
+      throw new Error('Failed to migrate whitelist');
+    }
+  }
+
+  return await response.json();
 }
