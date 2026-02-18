@@ -307,9 +307,9 @@ export async function removeFromWhitelistTire2(address: string): Promise<void> {
   }
 }
 
-// Migrate whitelist - check and update whitelist data
-export async function migrateWhitelist(): Promise<any> {
-  const response = await fetch(`${API_BASE_URL}/whitelist/migrate`, {
+// Migrate Main to Redis - sync whitelist data from Main (Postgres) to Redis
+export async function migrateMainToRedis(): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/migrateMainToRedis`, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -322,13 +322,42 @@ export async function migrateWhitelist(): Promise<any> {
       throw new Error('Unauthorized');
     }
     if (response.status === 405 || response.status === 404) {
-      throw new Error('Backend API not yet implemented. Please set up the whitelist migrate endpoint on the Creator Tracker backend.');
+      throw new Error('Backend API not yet implemented. Please set up the whitelist migrate Main to Redis endpoint on the Creator Tracker backend.');
     }
     try {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to migrate whitelist');
+      throw new Error(error.error || 'Failed to migrate Main to Redis');
     } catch (e) {
-      throw new Error('Failed to migrate whitelist');
+      throw new Error('Failed to migrate Main to Redis');
+    }
+  }
+
+  return await response.json();
+}
+
+
+// Migrate Redis to Main - sync whitelist data from Redis to Main (Postgres)
+export async function migrateRedisToMain(): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/whitelist/migrateRedisToMain`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+    if (response.status === 405 || response.status === 404) {
+      throw new Error('Backend API not yet implemented. Please set up the whitelist migrate Main to Redis endpoint on the Creator Tracker backend.');
+    }
+    try {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to migrate Main to Redis');
+    } catch (e) {
+      throw new Error('Failed to migrate Main to Redis');
     }
   }
 

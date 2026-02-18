@@ -1,13 +1,20 @@
 <template>
   <div class="w-full">
-    <!-- Top: Check and Migrate -->
-    <div class="mb-4 flex items-center justify-end">
+    <!-- Top: Migrate buttons -->
+    <div class="mb-4 flex items-center justify-end gap-2">
       <button
-        @click="checkAndMigrate"
-        :disabled="migrating"
-        class="px-3 py-1.5 text-xs bg-blue-700/80 hover:bg-blue-600 text-blue-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+        @click="migrateMainToRedis"
+        :disabled="migratingMainToRedis || migratingRedisToMain"
+        class="px-3 py-1.5 text-xs bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {{ migrating ? 'Migrating...' : 'Check and Migrate from Redis to Postgres' }}
+        {{ migratingMainToRedis ? 'Migrating...' : 'Check and Migrate from Postgres to Redis' }}
+      </button>
+      <button
+        @click="migrateRedisToMain"
+        :disabled="migratingMainToRedis || migratingRedisToMain"
+        class="px-3 py-1.5 text-xs bg-purple-700/80 hover:bg-purple-600 text-purple-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ migratingRedisToMain ? 'Migrating...' : 'Check and Migrate from Redis to Postgres' }}
       </button>
     </div>
     <!-- Two columns: Tier 1 (left) | Tier 2 (right) -->
@@ -332,7 +339,8 @@ import {
   addWalletToWhitelistTire2,
   removeFromWhitelistTire1, 
   removeFromWhitelistTire2,
-  migrateWhitelist,
+  migrateMainToRedis as migrateMainToRedisApi,
+  migrateRedisToMain as migrateRedisToMainApi,
   type WhitelistWallet 
 } from '../../services/whitelist'
 
@@ -341,7 +349,8 @@ const whitelistTier2 = ref<WhitelistWallet[]>([])
 const loading = ref(false)
 const addingTier1 = ref(false)
 const addingTier2 = ref(false)
-const migrating = ref(false)
+const migratingMainToRedis = ref(false)
+const migratingRedisToMain = ref(false)
 const newAddressTier1 = ref('')
 const newAddressTier2 = ref('')
 const searchAddressTier1 = ref('')
@@ -446,28 +455,48 @@ const clearSearch = (tier: 'tier1' | 'tier2') => {
   }
 }
 
-// Check and migrate whitelist
-const checkAndMigrate = async () => {
-  if (!confirm('Check and migrate whitelist data?\n\nThis will verify and update the whitelist.')) return
+// Migrate Main to Redis
+const migrateMainToRedis = async () => {
+  if (!confirm('Migrate Main to Redis?\n\nThis will sync whitelist data from Main (Postgres) to Redis.')) return
   try {
-    migrating.value = true
-    const result = await migrateWhitelist()
+    migratingMainToRedis.value = true
+    const result = await migrateMainToRedisApi()
     if (result.success) {
       const parts: string[] = []
       if (result.message) parts.push(result.message)
       if (result.checked !== undefined) parts.push(`\n✓ Checked: ${result.checked} wallet${result.checked !== 1 ? 's' : ''}`)
       if (result.migrated !== undefined) parts.push(`✓ Migrated: ${result.migrated} wallet${result.migrated !== 1 ? 's' : ''}`)
       if (result.skipped !== undefined && result.skipped > 0) parts.push(`• Skipped: ${result.skipped} wallet${result.skipped !== 1 ? 's' : ''}`)
-      alert(parts.join('\n') || 'Migration completed successfully!')
+      alert(parts.join('\n') || 'Migrate Main to Redis completed successfully!')
       await loadAllWhitelists()
     } else {
-      alert(result.message || 'Migration failed')
+      alert(result.message || 'Migrate Main to Redis failed')
     }
   } catch (error: any) {
-    console.error('Error migrating whitelist:', error)
-    alert(`Failed to migrate whitelist: ${error.message}`)
+    console.error('Error migrating Main to Redis:', error)
+    alert(`Failed to migrate Main to Redis: ${error.message}`)
   } finally {
-    migrating.value = false
+    migratingMainToRedis.value = false
+  }
+}
+
+// Migrate Redis to Main
+const migrateRedisToMain = async () => {
+  if (!confirm('Migrate Redis to Main?\n\nThis will sync whitelist data from Redis to Main (Postgres).')) return
+  try {
+    migratingRedisToMain.value = true
+    const result = await migrateRedisToMainApi()
+    if (result.success) {
+      alert('Migrate Redis to Main completed successfully!')
+      await loadAllWhitelists()
+    } else {
+      alert(result.message || 'Migrate Redis to Main failed')
+    }
+  } catch (error: any) {
+    console.error('Error migrating Redis to Main:', error)
+    alert(`Failed to migrate Redis to Main: ${error.message}`)
+  } finally {
+    migratingRedisToMain.value = false
   }
 }
 
