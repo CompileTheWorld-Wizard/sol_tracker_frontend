@@ -129,21 +129,26 @@ export async function getCreatorWalletsAnalytics(
   filters?: FilterParams,
   whatIfSettings?: WhatIfSettings | null,
   sortColumn?: string | null,
-  sortDirection?: 'asc' | 'desc'
+  sortDirection?: 'asc' | 'desc',
+  tire2: boolean = false
 ): Promise<CreatorWalletsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
   });
-  
+
   if (viewAll) {
     params.append('viewAll', 'true');
   }
-  
+
+  if (tire2) {
+    params.append('tire2', 'true');
+  }
+
   if (sortColumn) {
     params.append('sortColumn', sortColumn);
   }
-  
+
   if (sortDirection) {
     params.append('sortDirection', sortDirection);
   }

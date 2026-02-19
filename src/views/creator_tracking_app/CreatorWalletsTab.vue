@@ -2032,6 +2032,11 @@ import { addWalletsToWhitelistTire1, addWalletsToWhitelistTire2, getWhitelistedW
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
+const props = withDefaults(
+  defineProps<{ tier2Only?: boolean }>(),
+  { tier2Only: false }
+)
+
 const emit = defineEmits<{
   'data-updated': []
   'update-total': [total: number]
@@ -3251,7 +3256,8 @@ const loadWallets = async () => {
       filterParams,
       whatIfSettingsToSend,
       sortColumn.value,
-      sortDirection.value
+      sortDirection.value,
+      props.tier2Only
     )
     wallets.value = response.wallets
     // Ensure pagination object is properly set
@@ -3463,7 +3469,8 @@ const clearData = () => {
 }
 
 defineExpose({
-  clearData
+  clearData,
+  loadWallets
 })
 </script>
 
