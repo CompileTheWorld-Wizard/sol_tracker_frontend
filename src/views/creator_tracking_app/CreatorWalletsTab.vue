@@ -3427,10 +3427,12 @@ const handleExport = async () => {
     // Use streaming export endpoint for better performance with large datasets
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
     const params = new URLSearchParams()
-    
+    if (props.tier2Only) {
+      params.append('tire2', 'true')
+    }
     // Match loadWallets logic: always exclude blacklisted (viewAll = false)
     // This can be made configurable later if needed
-    
+
     const response = await fetch(`${API_BASE_URL}/tokens/creators/export?${params.toString()}`, {
       method: 'POST',
       credentials: 'include',
