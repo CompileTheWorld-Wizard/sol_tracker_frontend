@@ -112,18 +112,19 @@ export async function updateFilterPreset(
   });
 
   if (!response.ok) {
+    let message = 'Failed to update filter preset';
     if (response.status === 401) {
-      throw new Error('Unauthorized');
+      message = 'Unauthorized';
+    } else if (response.status === 405 || response.status === 404) {
+      message = 'Backend API not yet implemented. Please set up the filter presets router on the Creator Tracker backend.';
+    } else {
+      try {
+        const error = await response.json();
+        message = error.error || message;
+      } catch (_) {}
     }
-    if (response.status === 405 || response.status === 404) {
-      throw new Error('Backend API not yet implemented. Please set up the filter presets router on the Creator Tracker backend.');
-    }
-    try {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to update filter preset');
-    } catch (e) {
-      throw new Error('Failed to update filter preset');
-    }
+    alert(message);
+    throw new Error(message);
   }
 
   return await response.json();
