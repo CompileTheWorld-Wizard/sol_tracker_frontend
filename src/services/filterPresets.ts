@@ -4,9 +4,12 @@ export interface FilterPreset {
   id: string;
   name: string;
   filters: any;
+  columnsVisibility?: Record<string, boolean> | null;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type ColumnVisibilityMap = Record<string, boolean>;
 
 export interface PresetsResponse {
   presets: FilterPreset[];
@@ -62,15 +65,20 @@ export async function getFilterPreset(id: string): Promise<FilterPreset> {
 export async function createFilterPreset(
   id: string,
   name: string,
-  filters: any
+  filters: any,
+  columnsVisibility?: ColumnVisibilityMap | null
 ): Promise<FilterPreset> {
+  const body: { id: string; name: string; filters: any; columnsVisibility?: ColumnVisibilityMap | null } = { id, name, filters };
+  if (columnsVisibility !== undefined) {
+    body.columnsVisibility = columnsVisibility;
+  }
   const response = await fetch(`${API_BASE_URL}/filter-presets`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ id, name, filters }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -100,6 +108,7 @@ export async function updateFilterPreset(
   updates: {
     name?: string;
     filters?: any;
+    columnsVisibility?: ColumnVisibilityMap | null;
   }
 ): Promise<FilterPreset> {
   const response = await fetch(`${API_BASE_URL}/filter-presets/${id}`, {

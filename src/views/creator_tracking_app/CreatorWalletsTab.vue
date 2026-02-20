@@ -153,6 +153,44 @@
           >
             {{ savingToWhitelist ? 'Saving...' : 'Save filtered results into Whitelist' }}
           </button>
+          <div class="relative">
+            <button
+              type="button"
+              @click="showColumnsPopover = !showColumnsPopover"
+              :class="['px-2 py-1 text-xs font-semibold rounded transition flex items-center gap-1.5', showColumnsPopover ? 'bg-gray-600 text-gray-200' : 'bg-gray-700/80 hover:bg-gray-600 text-gray-300']"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+              </svg>
+              <span>Columns</span>
+            </button>
+            <div
+              v-if="showColumnsPopover"
+              class="absolute left-0 top-full mt-1 z-50 w-64 max-h-80 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-2"
+            >
+              <div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-700 mb-2">Show columns</div>
+              <label
+                v-for="col in TABLE_COLUMNS"
+                :key="col.id"
+                class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700/50 cursor-pointer text-xs text-gray-200"
+              >
+                <input
+                  type="checkbox"
+                  :checked="columnVisible(col.id)"
+                  @change="setColumnVisible(col.id, ($event.target as HTMLInputElement).checked)"
+                  class="rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                />
+                <span>{{ col.label }}</span>
+              </label>
+              <button
+                type="button"
+                @click="resetColumnVisibility"
+                class="w-full mt-2 pt-2 border-t border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 text-left"
+              >
+                Reset to default
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Active Filters Widgets -->
@@ -1361,7 +1399,8 @@
           <thead class="bg-gray-800 border-b border-gray-700 sticky top-0 z-30">
             <!-- Top row with merged headers -->
             <tr>
-              <th 
+              <th
+                v-if="columnVisible('address')"
                 rowspan="2" 
                 @click="handleSort('address')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1371,7 +1410,8 @@
                   <span v-if="getSortIcon('address')" class="text-purple-400">{{ getSortIcon('address') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('totalTokens')"
                 rowspan="2" 
                 @click="handleSort('totalTokens')"
                 class="px-1 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 w-14 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1385,7 +1425,8 @@
                   <div>(Valid)</div>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('bondedTokens')"
                 rowspan="2" 
                 @click="handleSort('bondedTokens')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1395,7 +1436,8 @@
                   <span v-if="getSortIcon('bondedTokens')" class="text-purple-400">{{ getSortIcon('bondedTokens') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('winRate')"
                 rowspan="2" 
                 @click="handleSort('winRate')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1405,7 +1447,8 @@
                   <span v-if="getSortIcon('winRate')" class="text-purple-400">{{ getSortIcon('winRate') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgAthMcap')"
                 rowspan="2" 
                 @click="handleSort('avgAthMcap')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1415,7 +1458,8 @@
                   <span v-if="getSortIcon('avgAthMcap')" class="text-purple-400">{{ getSortIcon('avgAthMcap') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('medianAthMcap')"
                 rowspan="2" 
                 @click="handleSort('medianAthMcap')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1425,10 +1469,23 @@
                   <span v-if="getSortIcon('medianAthMcap')" class="text-purple-400">{{ getSortIcon('medianAthMcap') }}</span>
                 </div>
               </th>
-              <th colspan="4" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">ATH MCap Percentiles</th>
-              <th colspan="8" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">Avg Buys/Sells</th>
-              <th colspan="3" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">Expected ROI (1st/2nd/3rd Buy)</th>
-              <th 
+              <th
+                v-if="visibleAthPercentileCount > 0"
+                :colspan="visibleAthPercentileCount"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
+              >ATH MCap Percentiles</th>
+              <th
+                v-if="visibleBuySellCount > 0"
+                :colspan="visibleBuySellCount"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
+              >Avg Buys/Sells</th>
+              <th
+                v-if="visibleRoiCount > 0"
+                :colspan="visibleRoiCount"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
+              >Expected ROI (1st/2nd/3rd Buy)</th>
+              <th
+                v-if="columnVisible('avgRugRate')"
                 rowspan="2" 
                 @click="handleSort('avgRugRate')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1438,7 +1495,8 @@
                   <span v-if="getSortIcon('avgRugRate')" class="text-purple-400">{{ getSortIcon('avgRugRate') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgRugTime')"
                 rowspan="2" 
                 @click="handleSort('avgRugTime')"
                 class="px-1 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 w-16 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1452,10 +1510,14 @@
                   <div>(Secs)</div>
                 </div>
               </th>
-              <th rowspan="2" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider min-w-[360px] border border-gray-700">Multiplier Scores</th>
-              <th 
+              <th
+                v-if="columnVisible('multiplierScores')"
+                rowspan="2"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider min-w-[360px] border border-gray-700"
+              >Multiplier Scores</th>
+              <th
+                v-if="showWhatIfColumn && columnVisible('whatIfPnl')"
                 rowspan="2" 
-                v-if="showWhatIfColumn" 
                 @click="handleSort('whatIfPnl')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1473,7 +1535,8 @@
                   </button>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('finalScore')"
                 rowspan="2" 
                 @click="handleSort('finalScore')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
@@ -1493,11 +1556,12 @@
             </tr>
             <!-- Bottom row with individual column headers -->
             <tr>
-              <th class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">25th</th>
-              <th class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">50th</th>
-              <th class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">75th</th>
-              <th class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">90th</th>
-              <th 
+              <th v-if="columnVisible('athP25')" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">25th</th>
+              <th v-if="columnVisible('athP50')" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">50th</th>
+              <th v-if="columnVisible('athP75')" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">75th</th>
+              <th v-if="columnVisible('athP90')" class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700">90th</th>
+              <th
+                v-if="columnVisible('avgBuyCount')"
                 @click="handleSort('avgBuyCount')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1506,7 +1570,8 @@
                   <span v-if="getSortIcon('avgBuyCount')" class="text-purple-400">{{ getSortIcon('avgBuyCount') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgBuySol')"
                 @click="handleSort('avgBuySol')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1515,7 +1580,8 @@
                   <span v-if="getSortIcon('avgBuySol')" class="text-purple-400">{{ getSortIcon('avgBuySol') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgFirst5BuySol')"
                 @click="handleSort('avgFirst5BuySol')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1524,7 +1590,8 @@
                   <span v-if="getSortIcon('avgFirst5BuySol')" class="text-purple-400">{{ getSortIcon('avgFirst5BuySol') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('medianFirst5BuySol')"
                 @click="handleSort('medianFirst5BuySol')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1533,7 +1600,8 @@
                   <span v-if="getSortIcon('medianFirst5BuySol')" class="text-purple-400">{{ getSortIcon('medianFirst5BuySol') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgDevBuyAmount')"
                 @click="handleSort('avgDevBuyAmount')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1542,7 +1610,8 @@
                   <span v-if="getSortIcon('avgDevBuyAmount')" class="text-purple-400">{{ getSortIcon('avgDevBuyAmount') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('medianDevBuyAmount')"
                 @click="handleSort('medianDevBuyAmount')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1551,7 +1620,8 @@
                   <span v-if="getSortIcon('medianDevBuyAmount')" class="text-purple-400">{{ getSortIcon('medianDevBuyAmount') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgSellCount')"
                 @click="handleSort('avgSellCount')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1560,7 +1630,8 @@
                   <span v-if="getSortIcon('avgSellCount')" class="text-purple-400">{{ getSortIcon('avgSellCount') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('avgSellSol')"
                 @click="handleSort('avgSellSol')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1569,7 +1640,8 @@
                   <span v-if="getSortIcon('avgSellSol')" class="text-purple-400">{{ getSortIcon('avgSellSol') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('roi1st')"
                 @click="handleSort('roi1st')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1578,7 +1650,8 @@
                   <span v-if="getSortIcon('roi1st')" class="text-purple-400">{{ getSortIcon('roi1st') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('roi2nd')"
                 @click="handleSort('roi2nd')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1587,7 +1660,8 @@
                   <span v-if="getSortIcon('roi2nd')" class="text-purple-400">{{ getSortIcon('roi2nd') }}</span>
                 </div>
               </th>
-              <th 
+              <th
+                v-if="columnVisible('roi3rd')"
                 @click="handleSort('roi3rd')"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
               >
@@ -1601,7 +1675,7 @@
           <tbody class="divide-y divide-gray-800">
             <!-- Empty State -->
             <tr v-if="!loading && wallets.length === 0">
-              <td :colspan="(showWhatIfColumn ? 23 : 22) + (tier2Only || blacklistOnly ? 1 : 0)" class="px-2 py-8 text-center">
+              <td :colspan="effectiveVisibleColumnCount + (tier2Only || blacklistOnly ? 1 : 0)" class="px-2 py-8 text-center">
                 <p class="text-gray-400 text-xs font-semibold mb-1">No creator wallets found</p>
                 <p class="text-gray-500 text-[10px]">Creator wallets will appear here once tokens are tracked</p>
               </td>
@@ -1613,7 +1687,7 @@
               class="hover:bg-gray-800/50 transition cursor-pointer"
               @click="handleRowClick(wallet.address)"
             >
-              <td class="px-2 py-1.5 whitespace-nowrap border border-gray-700">
+              <td v-if="columnVisible('address')" class="px-2 py-1.5 whitespace-nowrap border border-gray-700">
                 <div class="flex items-center gap-1.5">
                   <button
                     @click.stop="copyToClipboard(wallet.address)"
@@ -1626,20 +1700,20 @@
                   <div class="text-[10px] text-gray-400 font-mono">{{ formatAddress(wallet.address) }}</div>
                 </div>
               </td>
-              <td class="px-1 py-1.5 whitespace-nowrap text-right border border-gray-700 w-14">
+              <td v-if="columnVisible('totalTokens')" class="px-1 py-1.5 whitespace-nowrap text-right border border-gray-700 w-14">
                 <div class="text-xs font-semibold text-gray-200">
                   {{ wallet.totalTokens }}<span class="text-gray-500 ml-1">({{ getValidTokenCount(wallet) }})</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('bondedTokens')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-green-400">{{ wallet.bondedTokens }}</div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('winRate')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold" :class="getWinRateColor(wallet.winRate)">
-                  {{ wallet.winRate.toFixed(2) }}%<span v-if="viewMode === 'score'" class="text-gray-500 ml-1">({{ wallet.scores.winRateScore.toFixed(0) }})</span>
+                  {{ wallet.winRate.toFixed(2) }}%                  <span v-if="viewMode === 'score'" class="text-gray-500 ml-1">({{ wallet.scores.winRateScore.toFixed(0) }})</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgAthMcap')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.avgAthMcap !== null">
                     ${{ formatCurrency(wallet.avgAthMcap) }}
@@ -1651,7 +1725,7 @@
                   <span v-else class="text-gray-500">N/A</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('medianAthMcap')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.medianAthMcap !== null">
                     ${{ formatCurrency(wallet.medianAthMcap) }}<span v-if="viewMode === 'score'" class="text-gray-500 ml-1">({{ wallet.scores.medianAthMcapScore.toFixed(0) }})</span>
@@ -1660,28 +1734,28 @@
                 </div>
               </td>
               <!-- ATH MCap Percentiles -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
+              <td v-if="columnVisible('athP25')" class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.athMcapPercentileRank !== null && wallet.athMcapPercentileRank <= 25" class="text-green-400">✓</span>
                   <span v-else-if="wallet.athMcapPercentileRank !== null" class="text-gray-500">-</span>
                   <span v-else class="text-gray-500">N/A</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
+              <td v-if="columnVisible('athP50')" class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.athMcapPercentileRank !== null && wallet.athMcapPercentileRank > 25 && wallet.athMcapPercentileRank <= 50" class="text-green-400">✓</span>
                   <span v-else-if="wallet.athMcapPercentileRank !== null" class="text-gray-500">-</span>
                   <span v-else class="text-gray-500">N/A</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
+              <td v-if="columnVisible('athP75')" class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.athMcapPercentileRank !== null && wallet.athMcapPercentileRank > 50 && wallet.athMcapPercentileRank <= 75" class="text-green-400">✓</span>
                   <span v-else-if="wallet.athMcapPercentileRank !== null" class="text-gray-500">-</span>
                   <span v-else class="text-gray-500">N/A</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
+              <td v-if="columnVisible('athP90')" class="px-2 py-1.5 whitespace-nowrap text-center border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.athMcapPercentileRank !== null && wallet.athMcapPercentileRank > 75" class="text-green-400">✓</span>
                   <span v-else-if="wallet.athMcapPercentileRank !== null" class="text-gray-500">-</span>
@@ -1689,7 +1763,7 @@
                 </div>
               </td>
               <!-- Avg Buy Count -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgBuyCount')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats">
                     {{ Math.round(wallet.buySellStats.avgBuyCount) }}
@@ -1698,7 +1772,7 @@
                 </div>
               </td>
               <!-- Avg Buy Sol Amount -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgBuySol')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats">
                     {{ wallet.buySellStats.avgBuyTotalSol.toFixed(2) }}
@@ -1707,7 +1781,7 @@
                 </div>
               </td>
               <!-- Avg First 5 Buy SOL -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgFirst5BuySol')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats && wallet.buySellStats.avgFirst5BuySol !== undefined && wallet.buySellStats.avgFirst5BuySol !== null">
                     {{ wallet.buySellStats.avgFirst5BuySol.toFixed(2) }}
@@ -1716,7 +1790,7 @@
                 </div>
               </td>
               <!-- Median First 5 Buy SOL -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('medianFirst5BuySol')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats && wallet.buySellStats.medianFirst5BuySol !== undefined && wallet.buySellStats.medianFirst5BuySol !== null">
                     {{ wallet.buySellStats.medianFirst5BuySol.toFixed(2) }}
@@ -1725,7 +1799,7 @@
                 </div>
               </td>
               <!-- Avg Dev Buy -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgDevBuyAmount')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats && wallet.buySellStats.avgDevBuyAmount !== undefined && wallet.buySellStats.avgDevBuyAmount !== null">
                     {{ wallet.buySellStats.avgDevBuyAmount.toFixed(4) }}
@@ -1734,7 +1808,7 @@
                 </div>
               </td>
               <!-- Median Dev Buy -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('medianDevBuyAmount')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats && wallet.buySellStats.medianDevBuyAmount !== undefined && wallet.buySellStats.medianDevBuyAmount !== null">
                     {{ wallet.buySellStats.medianDevBuyAmount.toFixed(4) }}
@@ -1743,7 +1817,7 @@
                 </div>
               </td>
               <!-- Avg Sell Count -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgSellCount')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats">
                     {{ Math.round(wallet.buySellStats.avgSellCount) }}
@@ -1752,7 +1826,7 @@
                 </div>
               </td>
               <!-- Avg Sell Sol Amount -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgSellSol')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-gray-200">
                   <span v-if="wallet.buySellStats">
                     {{ wallet.buySellStats.avgSellTotalSol.toFixed(2) }}
@@ -1761,7 +1835,7 @@
                 </div>
               </td>
               <!-- Expected ROI 1st Buy -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('roi1st')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.expectedROI">
                     <span :class="getRoiColor(wallet.expectedROI.avgRoi1stBuy)">
@@ -1772,7 +1846,7 @@
                 </div>
               </td>
               <!-- Expected ROI 2nd Buy -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('roi2nd')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.expectedROI">
                     <span :class="getRoiColor(wallet.expectedROI.avgRoi2ndBuy)">
@@ -1783,7 +1857,7 @@
                 </div>
               </td>
               <!-- Expected ROI 3rd Buy -->
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('roi3rd')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold">
                   <span v-if="wallet.expectedROI">
                     <span :class="getRoiColor(wallet.expectedROI.avgRoi3rdBuy)">
@@ -1793,12 +1867,12 @@
                   <span v-else class="text-gray-500">N/A</span>
                 </div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('avgRugRate')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold" :class="wallet.avgRugRate >= 50 ? 'text-red-400' : wallet.avgRugRate >= 30 ? 'text-yellow-400' : 'text-gray-400'">
                   {{ wallet.avgRugRate?.toFixed(2) || '0.00' }}%<span v-if="viewMode === 'score'" class="text-gray-500 ml-1">({{ wallet.scores.avgRugRateScore?.toFixed(0) || '0' }})</span>
                 </div>
               </td>
-              <td class="px-1 py-1.5 text-right border border-gray-700 w-16">
+              <td v-if="columnVisible('avgRugTime')" class="px-1 py-1.5 text-right border border-gray-700 w-16">
                 <div v-if="wallet.avgRugTime !== null && wallet.avgRugTime !== undefined">
                   <div class="text-xs font-semibold" :class="wallet.avgRugTime <= 5 ? 'text-red-400' : wallet.avgRugTime <= 15 ? 'text-yellow-400' : 'text-green-400'">
                     {{ wallet.avgRugTime.toFixed(2) }}s<span v-if="viewMode === 'score'" class="text-gray-500 ml-1">({{ wallet.scores.timeBucketRugRateScore?.toFixed(0) || '0' }})</span>
@@ -1806,7 +1880,7 @@
                 </div>
                 <div v-else class="text-xs text-gray-500">N/A</div>
               </td>
-              <td class="px-2 py-1.5 text-right min-w-[360px] border border-gray-700">
+              <td v-if="columnVisible('multiplierScores')" class="px-2 py-1.5 text-right min-w-[360px] border border-gray-700">
                 <div class="flex items-center gap-0.5 flex-wrap justify-end w-full">
                   <span 
                     v-for="multiplier in [1.5, 2, 3, 5, 10]" 
@@ -1832,7 +1906,7 @@
                   </span>
                 </div>
               </td>
-              <td v-if="showWhatIfColumn" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="showWhatIfColumn && columnVisible('whatIfPnl')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div v-if="wallet.whatIfPnl" class="text-xs font-semibold">
                   <div class="text-gray-200">${{ formatCurrency(wallet.whatIfPnl.avgPnl) }}</div>
                   <div class="text-[10px]" :class="getRoiColor(wallet.whatIfPnl.avgPnlPercent)">
@@ -1842,7 +1916,7 @@
                 </div>
                 <div v-else class="text-xs text-gray-500">N/A</div>
               </td>
-              <td class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+              <td v-if="columnVisible('finalScore')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold" :class="getScoreColor(wallet.scores.finalScore)">
                   {{ wallet.scores.finalScore.toFixed(2) }}
                 </div>
@@ -2133,6 +2207,81 @@ const whatIfSettings = ref<{
   multipleSells: []
 })
 
+// Table column visibility (saved in preset via API, not localStorage)
+const TABLE_COLUMNS: { id: string; label: string; defaultVisible: boolean }[] = [
+  { id: 'address', label: 'Wallet Address', defaultVisible: true },
+  { id: 'totalTokens', label: 'Total Tokens', defaultVisible: true },
+  { id: 'bondedTokens', label: 'Bonded Tokens', defaultVisible: true },
+  { id: 'winRate', label: 'Win Rate', defaultVisible: true },
+  { id: 'avgAthMcap', label: 'Avg ATH MCap', defaultVisible: true },
+  { id: 'medianAthMcap', label: 'Median ATH MCap', defaultVisible: true },
+  { id: 'athP25', label: 'ATH 25th %ile', defaultVisible: true },
+  { id: 'athP50', label: 'ATH 50th %ile', defaultVisible: true },
+  { id: 'athP75', label: 'ATH 75th %ile', defaultVisible: true },
+  { id: 'athP90', label: 'ATH 90th %ile', defaultVisible: true },
+  { id: 'avgBuyCount', label: 'Avg Buy Count', defaultVisible: true },
+  { id: 'avgBuySol', label: 'Avg Buy Sol', defaultVisible: true },
+  { id: 'avgFirst5BuySol', label: 'Avg First 5 Buy SOL', defaultVisible: true },
+  { id: 'medianFirst5BuySol', label: 'Median First 5 Buy SOL', defaultVisible: true },
+  { id: 'avgDevBuyAmount', label: 'Avg Dev Buy', defaultVisible: true },
+  { id: 'medianDevBuyAmount', label: 'Median Dev Buy', defaultVisible: true },
+  { id: 'avgSellCount', label: 'Avg Sell Count', defaultVisible: true },
+  { id: 'avgSellSol', label: 'Avg Sell Sol', defaultVisible: true },
+  { id: 'roi1st', label: 'ROI 1st Buy', defaultVisible: true },
+  { id: 'roi2nd', label: 'ROI 2nd Buy', defaultVisible: true },
+  { id: 'roi3rd', label: 'ROI 3rd Buy', defaultVisible: true },
+  { id: 'avgRugRate', label: 'Avg Rug Rate', defaultVisible: true },
+  { id: 'avgRugTime', label: 'Avg Rug Time', defaultVisible: true },
+  { id: 'multiplierScores', label: 'Multiplier Scores', defaultVisible: true },
+  { id: 'whatIfPnl', label: 'What If PNL', defaultVisible: true },
+  { id: 'finalScore', label: 'Final Score', defaultVisible: true }
+]
+
+function getDefaultColumnVisibility(): Record<string, boolean> {
+  const out: Record<string, boolean> = {}
+  for (const col of TABLE_COLUMNS) {
+    out[col.id] = col.defaultVisible
+  }
+  return out
+}
+
+const columnVisibility = ref<Record<string, boolean>>(getDefaultColumnVisibility())
+
+function columnVisible(id: string): boolean {
+  return columnVisibility.value[id] !== false
+}
+
+function setColumnVisible(id: string, visible: boolean) {
+  columnVisibility.value = { ...columnVisibility.value, [id]: visible }
+}
+
+const visibleColumnCount = computed(() => {
+  return TABLE_COLUMNS.filter(c => columnVisibility.value[c.id] !== false).length
+})
+
+// For empty-state colspan: What If column only counts when showWhatIfColumn is true
+const effectiveVisibleColumnCount = computed(() => {
+  const base = visibleColumnCount.value
+  const hideWhatIf = columnVisible('whatIfPnl') && !showWhatIfColumn.value
+  return base - (hideWhatIf ? 1 : 0)
+})
+
+const visibleAthPercentileCount = computed(() =>
+  ['athP25', 'athP50', 'athP75', 'athP90'].filter(id => columnVisible(id)).length
+)
+const visibleBuySellCount = computed(() =>
+  ['avgBuyCount', 'avgBuySol', 'avgFirst5BuySol', 'medianFirst5BuySol', 'avgDevBuyAmount', 'medianDevBuyAmount', 'avgSellCount', 'avgSellSol'].filter(id => columnVisible(id)).length
+)
+const visibleRoiCount = computed(() =>
+  ['roi1st', 'roi2nd', 'roi3rd'].filter(id => columnVisible(id)).length
+)
+
+function resetColumnVisibility() {
+  columnVisibility.value = getDefaultColumnVisibility()
+}
+
+const showColumnsPopover = ref(false)
+
 // Tree expansion state
 const expandedGroups = ref({
   tokenCount: true,
@@ -2161,6 +2310,7 @@ interface FilterPreset {
   id: string
   name: string
   filters: any
+  columnsVisibility?: Record<string, boolean> | null
   createdAt?: string
   updatedAt?: string
 }
@@ -2763,6 +2913,14 @@ const loadFilterPreset = () => {
   const preset = filterPresets.value.find(p => p.id === selectedFilterPreset.value)
   if (preset) {
     filters.value = JSON.parse(JSON.stringify(preset.filters))
+    if (preset.columnsVisibility && typeof preset.columnsVisibility === 'object') {
+      const merged: Record<string, boolean> = {}
+      for (const col of TABLE_COLUMNS) {
+        const v = preset.columnsVisibility![col.id]
+        merged[col.id] = v !== undefined ? v !== false : col.defaultVisible
+      }
+      columnVisibility.value = merged
+    }
     // Update addedFilterTypes based on loaded filters
     addedFilterTypes.value.clear()
     if (filters.value.totalTokens && (filters.value.totalTokens.min !== undefined || filters.value.totalTokens.max !== undefined)) {
@@ -2795,7 +2953,8 @@ const saveFilterPreset = async () => {
     const newPreset = await createFilterPreset(
       Date.now().toString(),
       newPresetName.value.trim(),
-      JSON.parse(JSON.stringify(filters.value))
+      JSON.parse(JSON.stringify(filters.value)),
+      { ...columnVisibility.value }
     )
     
     filterPresets.value.push(newPreset)
@@ -2819,7 +2978,8 @@ const saveAsMasterLive = async () => {
     if (existingPreset) {
       // Update existing Master Live preset
       const updatedPreset = await updateFilterPreset(existingPreset.id, {
-        filters: JSON.parse(JSON.stringify(filters.value))
+        filters: JSON.parse(JSON.stringify(filters.value)),
+        columnsVisibility: { ...columnVisibility.value }
       })
       
       // Update in local array
@@ -2833,7 +2993,8 @@ const saveAsMasterLive = async () => {
       const newPreset = await createFilterPreset(
         Date.now().toString(),
         masterLiveName,
-        JSON.parse(JSON.stringify(filters.value))
+        JSON.parse(JSON.stringify(filters.value)),
+        { ...columnVisibility.value }
       )
       
       filterPresets.value.push(newPreset)
