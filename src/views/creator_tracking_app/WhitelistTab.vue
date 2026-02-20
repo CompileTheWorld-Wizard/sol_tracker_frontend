@@ -47,21 +47,25 @@
             </div>
           </div>
         </div>
-        <div class="mb-2 flex gap-2">
-          <input
+        <div class="mb-2 flex flex-col gap-1.5">
+          <textarea
             v-model="newAddressTier2"
-            type="text"
-            placeholder="Enter wallet address"
-            class="flex-1 min-w-0 px-3 py-1.5 text-xs bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono"
-            @keydown.enter="addWallet()"
+            rows="3"
+            placeholder="Enter one or more wallet addresses (one per line)"
+            class="flex-1 min-w-0 px-3 py-2 text-xs bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono resize-y"
           />
-          <button
-            @click="addWallet()"
-            :disabled="addingTier2 || !newAddressTier2.trim()"
-            class="px-3 py-1.5 text-xs bg-blue-700/80 hover:bg-blue-600 text-blue-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          >
-            {{ addingTier2 ? '...' : 'Add' }}
-          </button>
+          <div class="flex gap-2 items-center">
+            <button
+              @click="addWallet()"
+              :disabled="addingTier2 || !parsedAddressesToAdd.length"
+              class="px-3 py-1.5 text-xs bg-blue-700/80 hover:bg-blue-600 text-blue-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              {{ addingTier2 ? 'Adding...' : `Add ${parsedAddressesToAdd.length ? `(${parsedAddressesToAdd.length})` : ''}` }}
+            </button>
+            <span v-if="parsedAddressesToAdd.length" class="text-[10px] text-gray-500">
+              {{ parsedAddressesToAdd.length }} address{{ parsedAddressesToAdd.length !== 1 ? 'es' : '' }} to add
+            </span>
+          </div>
         </div>
         <div class="mb-2 flex gap-2">
           <input
@@ -97,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   addWalletToWhitelistTire2,
   migrateMainToRedis as migrateMainToRedisApi,
@@ -120,19 +124,46 @@ const searchResultTier2 = ref<WhitelistWallet | null>(null)
 const searchDoneTier2 = ref(false)
 const searchingTier2 = ref(false)
 
-// Add a single wallet to Tier 2 and refresh the analytics table
+// Parse textarea into non-empty, trimmed, unique addresses (one per line)
+const parsedAddressesToAdd = computed(() => {
+  const raw = newAddressTier2.value
+  if (!raw.trim()) return []
+  const lines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+  return [...new Set(lines)]
+})
+
+// Add one or more wallets to Tier 2 and refresh the analytics table
 const addWallet = async () => {
-  const address = newAddressTier2.value.trim()
-  if (!address) return
+  const addresses = parsedAddressesToAdd.value
+  if (!addresses.length) return
   try {
     addingTier2.value = true
-    await addWalletToWhitelistTire2(address)
-    newAddressTier2.value = ''
-    alert('Wallet added to Tier 2 whitelist.')
-    await creatorWalletsTabRef.value?.loadWallets()
+    let added = 0
+    const failed: string[] = []
+    for (const address of addresses) {
+      try {
+        await addWalletToWhitelistTire2(address)
+        added++
+      } catch (err: any) {
+        failed.push(`${address}: ${err.message || 'Failed'}`)
+      }
+    }
+    if (added > 0) {
+      newAddressTier2.value = ''
+      await creatorWalletsTabRef.value?.loadWallets()
+    }
+    if (failed.length === 0) {
+      alert(added === 1 ? 'Wallet added to Tier 2 whitelist.' : `${added} wallet${added !== 1 ? 's' : ''} added to Tier 2 whitelist.`)
+    } else {
+      alert(
+        added > 0
+          ? `Added ${added}. Failed ${failed.length}:\n${failed.slice(0, 5).join('\n')}${failed.length > 5 ? `\n... and ${failed.length - 5} more` : ''}`
+          : `Failed to add:\n${failed.slice(0, 5).join('\n')}${failed.length > 5 ? `\n... and ${failed.length - 5} more` : ''}`
+      )
+    }
   } catch (error: any) {
-    console.error('Error adding wallet:', error)
-    alert(error.message || 'Failed to add wallet to Tier 2 whitelist.')
+    console.error('Error adding wallets:', error)
+    alert(error.message || 'Failed to add wallet(s) to Tier 2 whitelist.')
   } finally {
     addingTier2.value = false
   }
