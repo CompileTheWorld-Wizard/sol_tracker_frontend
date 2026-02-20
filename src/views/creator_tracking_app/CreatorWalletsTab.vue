@@ -1480,7 +1480,7 @@
                 rowspan="2"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
               >
-                Remove
+                Actions
               </th>
             </tr>
             <!-- Bottom row with individual column headers -->
