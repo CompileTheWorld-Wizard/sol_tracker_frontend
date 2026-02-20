@@ -47,22 +47,22 @@
             </div>
           </div>
         </div>
-        <div class="mb-2 flex flex-col gap-1.5">
+        <div class="mb-2 flex gap-2 items-start">
           <textarea
             v-model="newAddressTier2"
             rows="3"
             placeholder="Enter one or more wallet addresses (one per line)"
             class="flex-1 min-w-0 px-3 py-2 text-xs bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent font-mono resize-y"
           />
-          <div class="flex gap-2 items-center">
+          <div class="flex flex-col gap-1 shrink-0">
             <button
               @click="addWallet()"
               :disabled="addingTier2 || !parsedAddressesToAdd.length"
-              class="px-3 py-1.5 text-xs bg-blue-700/80 hover:bg-blue-600 text-blue-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              class="px-3 py-1.5 text-xs bg-blue-700/80 hover:bg-blue-600 text-blue-100 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               {{ addingTier2 ? 'Adding...' : `Add ${parsedAddressesToAdd.length ? `(${parsedAddressesToAdd.length})` : ''}` }}
             </button>
-            <span v-if="parsedAddressesToAdd.length" class="text-[10px] text-gray-500">
+            <span v-if="parsedAddressesToAdd.length" class="text-[10px] text-gray-500 text-right">
               {{ parsedAddressesToAdd.length }} address{{ parsedAddressesToAdd.length !== 1 ? 'es' : '' }} to add
             </span>
           </div>

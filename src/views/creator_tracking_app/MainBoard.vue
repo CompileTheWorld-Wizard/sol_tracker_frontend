@@ -226,6 +226,17 @@
           >
             Whitelist
           </button>
+          <button
+            @click="activeTab = 'blacklist'"
+            :class="[
+              'px-4 py-2 text-sm font-semibold transition',
+              activeTab === 'blacklist'
+                ? 'text-purple-400 border-b-2 border-purple-400'
+                : 'text-gray-400 hover:text-gray-300'
+            ]"
+          >
+            Blacklist
+          </button>
         </div>
       </div>
 
@@ -233,6 +244,7 @@
       <CreatorWalletsTab v-if="activeTab === 'creator-wallets'" ref="creatorWalletsTabRef" @data-updated="handleDataUpdated" @update-total="tokensTotalCount = $event" />
       <TokensTab v-else-if="activeTab === 'tokens'" ref="tokensTabRef" @select-token="selectedToken = $event" @update-total="tokensTotalCount = $event" @data-updated="handleDataUpdated" />
       <WhitelistTab v-else-if="activeTab === 'whitelist'" />
+      <BlacklistTab v-else-if="activeTab === 'blacklist'" />
     </main>
 
     <!-- Manage Blacklist Dialog -->
@@ -803,6 +815,7 @@ import { getCreatorWalletsFromTokens, getAthMcapStats, getAvgStats, type Token }
 import CreatorWalletsTab from './CreatorWalletsTab.vue'
 import TokensTab from './TokensTab.vue'
 import WhitelistTab from './WhitelistTab.vue'
+import BlacklistTab from './BlacklistTab.vue'
 // Import SVG files as raw strings
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
@@ -817,7 +830,7 @@ import logoutIconSvg from '../../icons/logout.svg?raw'
 
 const router = useRouter()
 
-const activeTab = ref<'creator-wallets' | 'tokens' | 'whitelist'>('creator-wallets')
+const activeTab = ref<'creator-wallets' | 'tokens' | 'whitelist' | 'blacklist'>('creator-wallets')
 const tokensTotalCount = ref<number>(0)
 const avgAthMcap = ref<number | null>(null)
 const medianAthMcap = ref<number | null>(null)
