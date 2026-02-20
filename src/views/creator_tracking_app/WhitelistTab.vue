@@ -19,8 +19,33 @@
     </div> -->
     <!-- Tier 2 Whitelist -->
     <div class="min-w-0 flex flex-col">
-        <div class="mb-2">
+        <div class="mb-2 flex items-center justify-between gap-2 flex-wrap">
           <h3 class="text-xs font-semibold text-blue-400">Tier 2 Whitelist</h3>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-gray-400 font-medium">Master Live Sync:</label>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400" :class="{ 'text-gray-600': masterLiveSyncRunning }">Off</span>
+              <button
+                type="button"
+                role="switch"
+                :aria-checked="masterLiveSyncRunning"
+                :disabled="masterLiveSyncLoading"
+                @click="toggleMasterLiveSync"
+                :class="[
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+                  masterLiveSyncRunning ? 'bg-emerald-600' : 'bg-gray-600'
+                ]"
+              >
+                <span
+                  :class="[
+                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                    masterLiveSyncRunning ? 'translate-x-6' : 'translate-x-1'
+                  ]"
+                />
+              </button>
+              <span class="text-xs text-gray-400" :class="{ 'text-gray-600': !masterLiveSyncRunning }">On</span>
+            </div>
+          </div>
         </div>
         <div class="mb-2 flex gap-2">
           <input
@@ -68,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   getWhitelistWalletByAddressTire2,
   addWalletToWhitelistTire2,
@@ -76,9 +101,12 @@ import {
   migrateRedisToMain as migrateRedisToMainApi,
   type WhitelistWallet
 } from '../../services/whitelist'
+import { getMasterLiveSyncStatus, startMasterLiveSync, stopMasterLiveSync } from '../../services/masterLiveSync'
 import CreatorWalletsTab from './CreatorWalletsTab.vue'
 
 const creatorWalletsTabRef = ref<InstanceType<typeof CreatorWalletsTab> | null>(null)
+const masterLiveSyncRunning = ref(false)
+const masterLiveSyncLoading = ref(false)
 const migratingMainToRedis = ref(false)
 const migratingRedisToMain = ref(false)
 const addingTier2 = ref(false)
@@ -130,6 +158,43 @@ const clearSearch = () => {
   searchResultTier2.value = null
   searchDoneTier2.value = false
 }
+
+const fetchMasterLiveSyncStatus = async () => {
+  try {
+    const status = await getMasterLiveSyncStatus()
+    masterLiveSyncRunning.value = status.running
+  } catch (_) {
+    masterLiveSyncRunning.value = false
+  }
+}
+
+const toggleMasterLiveSync = async () => {
+  if (masterLiveSyncLoading.value) return
+  masterLiveSyncLoading.value = true
+  try {
+    if (masterLiveSyncRunning.value) {
+      const result = await stopMasterLiveSync()
+      if (result.success) {
+        await fetchMasterLiveSyncStatus()
+      } else {
+        alert(result.error || 'Failed to stop master live sync')
+      }
+    } else {
+      const result = await startMasterLiveSync()
+      if (result.success) {
+        await fetchMasterLiveSyncStatus()
+      } else {
+        alert(result.error || 'Failed to start master live sync')
+      }
+    }
+  } finally {
+    masterLiveSyncLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchMasterLiveSyncStatus()
+})
 
 // Migrate Main to Redis
 const migrateMainToRedis = async () => {
