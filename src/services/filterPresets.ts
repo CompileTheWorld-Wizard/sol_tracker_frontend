@@ -125,6 +125,8 @@ export async function updateFilterPreset(
     }
     alert(message);
     throw new Error(message);
+  } else{
+    alert('Filter preset updated successfully');
   }
 
   return await response.json();
