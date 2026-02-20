@@ -2048,7 +2048,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, type PaginationInfo, type ReceiverWallet } from '../../services/creatorWallets'
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
 import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
@@ -2057,8 +2057,8 @@ import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
 const props = withDefaults(
-  defineProps<{ tier2Only?: boolean }>(),
-  { tier2Only: false }
+  defineProps<{ tier2Only?: boolean; searchWalletAddress?: string | null }>(),
+  { tier2Only: false, searchWalletAddress: null }
 )
 
 const emit = defineEmits<{
@@ -3353,6 +3353,7 @@ const loadWallets = async () => {
       whatIfSettingsToSend,
       sortColumn.value,
       sortDirection.value,
+      props.searchWalletAddress ?? undefined,
       props.tier2Only
     )
     wallets.value = response.wallets
@@ -3564,6 +3565,14 @@ const handleExport = async () => {
     loading.value = false
   }
 }
+
+// When tier2 search wallet address changes, refetch analytics (for Whitelist tab search)
+watch(
+  () => [props.searchWalletAddress, props.tier2Only],
+  () => {
+    if (props.tier2Only) loadWallets()
+  }
+)
 
 onMounted(async () => {
   await loadFilterPresets()

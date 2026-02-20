@@ -20,7 +20,7 @@
     <!-- Tier 2 Whitelist -->
     <div class="min-w-0 flex flex-col">
         <div class="mb-2 flex items-center justify-between gap-2 flex-wrap">
-          <h3 class="text-xs font-semibold text-blue-400">Tier 2 Whitelist</h3>
+          <h3 class="text-xs font-semibold text-blue-400">Tire 2 Whitelist</h3>
           <div class="flex items-center gap-2">
             <label class="text-xs text-gray-400 font-medium">Master Live Sync:</label>
             <div class="flex items-center gap-2">
@@ -86,8 +86,12 @@
             Clear
           </button>
         </div>
-      <!-- Tier 2 creator analytics: same columns as Creator Wallets tab (API: /creators/analytics?tire2=true) -->
-      <CreatorWalletsTab ref="creatorWalletsTabRef" tier2-only />
+      <!-- Tier 2 creator analytics: same columns as Creator Wallets tab (API: /creators/analytics?tire2=true); search uses walletAddress -->
+      <CreatorWalletsTab
+        ref="creatorWalletsTabRef"
+        tier2-only
+        :search-wallet-address="searchWalletAddressForAnalytics"
+      />
     </div>
   </div>
 </template>
@@ -95,7 +99,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import {
-  getWhitelistWalletByAddressTire2,
   addWalletToWhitelistTire2,
   migrateMainToRedis as migrateMainToRedisApi,
   migrateRedisToMain as migrateRedisToMainApi,
@@ -112,6 +115,7 @@ const migratingRedisToMain = ref(false)
 const addingTier2 = ref(false)
 const newAddressTier2 = ref('')
 const searchAddressTier2 = ref('')
+const searchWalletAddressForAnalytics = ref<string | null>(null)
 const searchResultTier2 = ref<WhitelistWallet | null>(null)
 const searchDoneTier2 = ref(false)
 const searchingTier2 = ref(false)
@@ -134,18 +138,17 @@ const addWallet = async () => {
   }
 }
 
-// Search by wallet address
+// Search by wallet address: call creators/analytics with tire2=true and walletAddress
 const searchByAddress = async () => {
   const address = searchAddressTier2.value.trim()
   if (!address) return
   try {
     searchingTier2.value = true
     searchDoneTier2.value = true
-    searchResultTier2.value = null
-    const result = await getWhitelistWalletByAddressTire2(address)
-    searchResultTier2.value = result.found && result.data ? result.data : null
+    searchWalletAddressForAnalytics.value = address
+    await creatorWalletsTabRef.value?.loadWallets()
   } catch (error: any) {
-    console.error('Search whitelist error:', error)
+    console.error('Search error:', error)
     alert(error.message || 'Failed to search Tier 2 whitelist')
     searchDoneTier2.value = false
   } finally {
@@ -155,8 +158,10 @@ const searchByAddress = async () => {
 
 const clearSearch = () => {
   searchAddressTier2.value = ''
+  searchWalletAddressForAnalytics.value = null
   searchResultTier2.value = null
   searchDoneTier2.value = false
+  creatorWalletsTabRef.value?.loadWallets()
 }
 
 const fetchMasterLiveSyncStatus = async () => {

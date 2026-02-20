@@ -130,6 +130,7 @@ export async function getCreatorWalletsAnalytics(
   whatIfSettings?: WhatIfSettings | null,
   sortColumn?: string | null,
   sortDirection?: 'asc' | 'desc',
+  walletAddress?: string,
   tire2: boolean = false
 ): Promise<CreatorWalletsResponse> {
   const params = new URLSearchParams({
@@ -153,19 +154,27 @@ export async function getCreatorWalletsAnalytics(
     params.append('sortDirection', sortDirection);
   }
 
-  // Add filters and What If settings to request body if provided
+  if (walletAddress) {
+    params.append('walletAddress', walletAddress);
+  }
+
+  // Add filters, whatIfSettings, and optional walletAddress to request body (backend: req.body?.walletAddress ?? req.query.walletAddress)
+  const body: { filters: Record<string, unknown>; whatIfSettings: WhatIfSettings | null; walletAddress?: string } = {
+    filters: (filters as Record<string, unknown>) || {},
+    whatIfSettings: whatIfSettings ?? null,
+  };
+  if (walletAddress?.trim()) {
+    body.walletAddress = walletAddress.trim();
+  }
   const requestOptions: RequestInit = {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ 
-      filters: filters || {},
-      whatIfSettings: whatIfSettings || null
-    })
+    body: JSON.stringify(body),
   };
-  
+
   const response = await fetch(`${API_BASE_URL}/tokens/creators/analytics?${params.toString()}`, requestOptions);
 
   if (!response.ok) {
