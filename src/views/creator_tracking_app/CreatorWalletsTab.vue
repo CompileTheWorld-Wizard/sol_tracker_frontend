@@ -1475,6 +1475,13 @@
                   <span v-if="getSortIcon('finalScore')" class="text-purple-400">{{ getSortIcon('finalScore') }}</span>
                 </div>
               </th>
+              <th
+                v-if="tier2Only"
+                rowspan="2"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
+              >
+                Remove
+              </th>
             </tr>
             <!-- Bottom row with individual column headers -->
             <tr>
@@ -1586,7 +1593,7 @@
           <tbody class="divide-y divide-gray-800">
             <!-- Empty State -->
             <tr v-if="!loading && wallets.length === 0">
-              <td :colspan="showWhatIfColumn ? 23 : 22" class="px-2 py-8 text-center">
+              <td :colspan="(showWhatIfColumn ? 23 : 22) + (tier2Only ? 1 : 0)" class="px-2 py-8 text-center">
                 <p class="text-gray-400 text-xs font-semibold mb-1">No creator wallets found</p>
                 <p class="text-gray-500 text-[10px]">Creator wallets will appear here once tokens are tracked</p>
               </td>
@@ -1831,6 +1838,15 @@
                 <div class="text-xs font-semibold" :class="getScoreColor(wallet.scores.finalScore)">
                   {{ wallet.scores.finalScore.toFixed(2) }}
                 </div>
+              </td>
+              <td v-if="tier2Only" class="px-2 py-1.5 text-center border border-gray-700">
+                <button
+                  @click.stop="removeFromTier2Whitelist(wallet.address)"
+                  :disabled="removingFromWhitelist === wallet.address"
+                  class="px-2 py-0.5 text-xs bg-red-900/60 hover:bg-red-800/70 text-red-200 font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ removingFromWhitelist === wallet.address ? '...' : 'Remove' }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -3303,6 +3319,22 @@ const handleRefresh = async () => {
     console.error('Error refreshing data:', err)
   } finally {
     refreshing.value = false
+  }
+}
+
+const removingFromWhitelist = ref<string | null>(null)
+const removeFromTier2Whitelist = async (address: string) => {
+  if (!confirm(`Remove ${address} from Tier 2 whitelist?`)) return
+  try {
+    removingFromWhitelist.value = address
+    await removeFromWhitelistTire2(address)
+    await loadWallets()
+    emit('data-updated')
+  } catch (err: any) {
+    console.error('Error removing from Tier 2 whitelist:', err)
+    alert(err.message || 'Failed to remove wallet from Tier 2 whitelist')
+  } finally {
+    removingFromWhitelist.value = null
   }
 }
 
