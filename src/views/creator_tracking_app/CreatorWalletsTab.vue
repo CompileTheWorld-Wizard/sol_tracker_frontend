@@ -145,6 +145,14 @@
           >
             Save as Master Live
           </button>
+          <button
+            v-if="!tier2Only"
+            @click="handleSaveFilteredResultsToWhitelist"
+            :disabled="loadingPresets || savingToWhitelist"
+            class="px-2 py-1 text-xs bg-blue-600/90 hover:bg-blue-600 text-white font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ savingToWhitelist ? 'Saving...' : 'Save filtered results into Whitelist' }}
+          </button>
         </div>
 
         <!-- Active Filters Widgets -->
@@ -2044,7 +2052,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, type PaginationInfo, type ReceiverWallet } from '../../services/creatorWallets'
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
 import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
-import { addWalletsToWhitelistTire1, addWalletsToWhitelistTire2, getWhitelistedWalletsTire1, getWhitelistedWalletsTire2, removeFromWhitelistTire1, removeFromWhitelistTire2 } from '../../services/whitelist'
+import { addWalletsToWhitelistTire1, addWalletsToWhitelistTire2, getWhitelistedWalletsTire1, getWhitelistedWalletsTire2, removeFromWhitelistTire1, removeFromWhitelistTire2, saveFilteredResultsToWhitelist } from '../../services/whitelist'
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
@@ -2152,6 +2160,7 @@ const selectedFilterPreset = ref<string>('')
 const showSavePresetDialog = ref(false)
 const newPresetName = ref('')
 const loadingPresets = ref(false)
+const savingToWhitelist = ref(false)
 
 interface Filters {
   totalTokens: { min?: number; max?: number }
@@ -2823,6 +2832,77 @@ const saveAsMasterLive = async () => {
   } catch (error: any) {
     console.error('Error saving Master Live preset:', error)
     alert(`Failed to save Master Live preset: ${error.message}`)
+  }
+}
+
+// Build current filter params and whatIf settings (shared shape for export / save-to-whitelist)
+function buildFilterParamsAndWhatIf(): { filterParams: Record<string, unknown>; whatIfSettingsToSend: unknown } {
+  const filterParams: Record<string, unknown> = {}
+  if (filters.value.totalTokens.min !== undefined || filters.value.totalTokens.max !== undefined) {
+    filterParams.totalTokens = {}
+    if (filters.value.totalTokens.min !== undefined) (filterParams.totalTokens as any).min = filters.value.totalTokens.min
+    if (filters.value.totalTokens.max !== undefined) (filterParams.totalTokens as any).max = filters.value.totalTokens.max
+  }
+  if (filters.value.bondedTokens.min !== undefined || filters.value.bondedTokens.max !== undefined) {
+    filterParams.bondedTokens = {}
+    if (filters.value.bondedTokens.min !== undefined) (filterParams.bondedTokens as any).min = filters.value.bondedTokens.min
+    if (filters.value.bondedTokens.max !== undefined) (filterParams.bondedTokens as any).max = filters.value.bondedTokens.max
+  }
+  if (filters.value.winRate.length > 0) filterParams.winRate = filters.value.winRate
+  if (filters.value.avgMcap.length > 0) filterParams.avgMcap = filters.value.avgMcap
+  if (filters.value.medianMcap.length > 0) filterParams.medianMcap = filters.value.medianMcap
+  if (filters.value.avgBuySells.length > 0) filterParams.avgBuySells = filters.value.avgBuySells
+  if (filters.value.expectedROI.length > 0) filterParams.expectedROI = filters.value.expectedROI
+  if (filters.value.rugRate.min !== undefined || filters.value.rugRate.max !== undefined) {
+    filterParams.rugRate = {}
+    if (filters.value.rugRate.min !== undefined) (filterParams.rugRate as any).min = filters.value.rugRate.min
+    if (filters.value.rugRate.max !== undefined) (filterParams.rugRate as any).max = filters.value.rugRate.max
+  }
+  if (filters.value.avgRugTime.min !== undefined || filters.value.avgRugTime.max !== undefined) {
+    filterParams.avgRugTime = {}
+    if (filters.value.avgRugTime.min !== undefined) (filterParams.avgRugTime as any).min = filters.value.avgRugTime.min
+    if (filters.value.avgRugTime.max !== undefined) (filterParams.avgRugTime as any).max = filters.value.avgRugTime.max
+  }
+  if (filters.value.finalScore.min !== undefined || filters.value.finalScore.max !== undefined) {
+    filterParams.finalScore = {}
+    if (filters.value.finalScore.min !== undefined) (filterParams.finalScore as any).min = filters.value.finalScore.min
+    if (filters.value.finalScore.max !== undefined) (filterParams.finalScore as any).max = filters.value.finalScore.max
+  }
+  if (filters.value.multiplierScores.length > 0) filterParams.multiplierScores = filters.value.multiplierScores
+  const whatIfSettingsToSend = showWhatIfColumn.value && whatIfSettings.value.buyPosition && whatIfSettings.value.sellStrategy
+    ? whatIfSettings.value
+    : null
+  return { filterParams, whatIfSettingsToSend }
+}
+
+// Save filtered results into whitelist (first tab only; calls POST /creators/save-to-whitelist)
+const handleSaveFilteredResultsToWhitelist = async () => {
+  if (savingToWhitelist.value) return
+  savingToWhitelist.value = true
+  try {
+    const { filterParams, whatIfSettingsToSend } = buildFilterParamsAndWhatIf()
+    const result = await saveFilteredResultsToWhitelist(false, false, filterParams, whatIfSettingsToSend)
+    if (result.success) {
+      let msg = result.message || 'Filtered results saved to whitelist successfully.'
+      if (result.tire1Added !== undefined || result.tire2Added !== undefined || result.alreadyInTire1 !== undefined || result.alreadyInTire2 !== undefined) {
+        const parts: string[] = []
+        if (result.tire1Added !== undefined || result.alreadyInTire1 !== undefined) {
+          parts.push(`Tier 1: ${result.tire1Added ?? 0} added, ${result.alreadyInTire1 ?? 0} already in list`)
+        }
+        if (result.tire2Added !== undefined || result.alreadyInTire2 !== undefined) {
+          parts.push(`Tier 2: ${result.tire2Added ?? 0} added, ${result.alreadyInTire2 ?? 0} already in list`)
+        }
+        if (parts.length) msg += '\n\n' + parts.join('. ')
+      }
+      alert(msg)
+    } else {
+      alert(result.error || 'Failed to save to whitelist.')
+    }
+  } catch (err: any) {
+    console.error('Save to whitelist error:', err)
+    alert(err.message || 'Failed to save to whitelist.')
+  } finally {
+    savingToWhitelist.value = false
   }
 }
 

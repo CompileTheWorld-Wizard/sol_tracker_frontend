@@ -363,3 +363,55 @@ export async function migrateRedisToMain(): Promise<any> {
 
   return await response.json();
 }
+
+const CREATORS_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
+export interface SaveToWhitelistSuccessResponse {
+  success: true;
+  message: string;
+  totalMatching?: number;
+  tire1Added?: number;
+  tire2Added?: number;
+  alreadyInTire1?: number;
+  alreadyInTire2?: number;
+}
+
+export interface SaveToWhitelistErrorResponse {
+  success: false;
+  error: string;
+}
+
+/** Save current filtered creator results into whitelist (POST /creators/save-to-whitelist) */
+export async function saveFilteredResultsToWhitelist(
+  viewAll: boolean,
+  tire2: boolean,
+  filters: Record<string, unknown>,
+  whatIfSettings: unknown
+): Promise<SaveToWhitelistSuccessResponse | SaveToWhitelistErrorResponse> {
+  const params = new URLSearchParams();
+  if (viewAll) params.set('viewAll', 'true');
+  if (tire2) params.set('tire2', 'true');
+  const response = await fetch(
+    `${CREATORS_API_BASE}/tokens/creators/save-to-whitelist?${params.toString()}`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filters, whatIfSettings }),
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = data?.error || `Failed to save to whitelist (${response.status})`;
+    return { success: false, error: msg };
+  }
+  return {
+    success: true,
+    message: data?.message ?? 'Saved to whitelist.',
+    totalMatching: data?.totalMatching,
+    tire1Added: data?.tire1Added,
+    tire2Added: data?.tire2Added,
+    alreadyInTire1: data?.alreadyInTire1,
+    alreadyInTire2: data?.alreadyInTire2,
+  };
+}
