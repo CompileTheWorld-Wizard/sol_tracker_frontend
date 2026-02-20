@@ -146,7 +146,7 @@
             Save as Master Live
           </button>
           <button
-            v-if="!tier2Only"
+            v-if="!tier2Only && !blacklistOnly"
             @click="handleSaveFilteredResultsToWhitelist"
             :disabled="loadingPresets || savingToWhitelist"
             class="px-2 py-1 text-xs bg-blue-600/90 hover:bg-blue-600 text-white font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1484,7 +1484,7 @@
                 </div>
               </th>
               <th
-                v-if="tier2Only"
+                v-if="tier2Only || blacklistOnly"
                 rowspan="2"
                 class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700"
               >
@@ -1601,7 +1601,7 @@
           <tbody class="divide-y divide-gray-800">
             <!-- Empty State -->
             <tr v-if="!loading && wallets.length === 0">
-              <td :colspan="(showWhatIfColumn ? 23 : 22) + (tier2Only ? 1 : 0)" class="px-2 py-8 text-center">
+              <td :colspan="(showWhatIfColumn ? 23 : 22) + (tier2Only || blacklistOnly ? 1 : 0)" class="px-2 py-8 text-center">
                 <p class="text-gray-400 text-xs font-semibold mb-1">No creator wallets found</p>
                 <p class="text-gray-500 text-[10px]">Creator wallets will appear here once tokens are tracked</p>
               </td>
@@ -1856,6 +1856,15 @@
                   {{ removingFromWhitelist === wallet.address ? '...' : 'Remove' }}
                 </button>
               </td>
+              <td v-if="blacklistOnly" class="px-2 py-1.5 text-center border border-gray-700">
+                <button
+                  @click.stop="removeFromBlacklist(wallet.address)"
+                  :disabled="removingFromBlacklist === wallet.address"
+                  class="px-2 py-0.5 text-xs bg-red-900/60 hover:bg-red-800/70 text-red-200 font-semibold rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ removingFromBlacklist === wallet.address ? '...' : 'Remove' }}
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -2053,12 +2062,13 @@ import { getCreatorWalletsAnalytics, getReceiverWallets, type CreatorWallet, typ
 import { getAppliedSettings, type ScoringSettings } from '../../services/settings'
 import { getFilterPresets, createFilterPreset, updateFilterPreset, deleteFilterPreset } from '../../services/filterPresets'
 import { addWalletsToWhitelistTire1, addWalletsToWhitelistTire2, getWhitelistedWalletsTire1, getWhitelistedWalletsTire2, removeFromWhitelistTire1, removeFromWhitelistTire2, saveFilteredResultsToWhitelist } from '../../services/whitelist'
+import { removeBlacklistWallet } from '../../services/blacklist'
 import copyIconSvg from '../../icons/copy.svg?raw'
 import checkIconSvg from '../../icons/check.svg?raw'
 
 const props = withDefaults(
-  defineProps<{ tier2Only?: boolean; searchWalletAddress?: string | null }>(),
-  { tier2Only: false, searchWalletAddress: null }
+  defineProps<{ tier2Only?: boolean; blacklistOnly?: boolean; searchWalletAddress?: string | null }>(),
+  { tier2Only: false, blacklistOnly: false, searchWalletAddress: null }
 )
 
 const emit = defineEmits<{
@@ -3354,7 +3364,8 @@ const loadWallets = async () => {
       sortColumn.value,
       sortDirection.value,
       props.searchWalletAddress ?? undefined,
-      props.tier2Only
+      props.tier2Only,
+      props.blacklistOnly
     )
     wallets.value = response.wallets
     // Ensure pagination object is properly set
@@ -3416,6 +3427,22 @@ const removeFromTier2Whitelist = async (address: string) => {
     alert(err.message || 'Failed to remove wallet from Tier 2 whitelist')
   } finally {
     removingFromWhitelist.value = null
+  }
+}
+
+const removingFromBlacklist = ref<string | null>(null)
+const removeFromBlacklist = async (address: string) => {
+  if (!confirm(`Remove ${address} from blacklist?`)) return
+  try {
+    removingFromBlacklist.value = address
+    await removeBlacklistWallet(address)
+    await loadWallets()
+    emit('data-updated')
+  } catch (err: any) {
+    console.error('Error removing from blacklist:', err)
+    alert(err.message || 'Failed to remove wallet from blacklist')
+  } finally {
+    removingFromBlacklist.value = null
   }
 }
 
@@ -3566,11 +3593,11 @@ const handleExport = async () => {
   }
 }
 
-// When tier2 search wallet address changes, refetch analytics (for Whitelist tab search)
+// When tier2/blacklist search wallet address changes, refetch analytics (for Whitelist/Blacklist tab search)
 watch(
-  () => [props.searchWalletAddress, props.tier2Only],
+  () => [props.searchWalletAddress, props.tier2Only, props.blacklistOnly],
   () => {
-    if (props.tier2Only) loadWallets()
+    if (props.tier2Only || props.blacklistOnly) loadWallets()
   }
 )
 

@@ -131,7 +131,8 @@ export async function getCreatorWalletsAnalytics(
   sortColumn?: string | null,
   sortDirection?: 'asc' | 'desc',
   walletAddress?: string,
-  tire2: boolean = false
+  tire2: boolean = false,
+  blacklist: boolean = false
 ): Promise<CreatorWalletsResponse> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -144,6 +145,10 @@ export async function getCreatorWalletsAnalytics(
 
   if (tire2) {
     params.append('tire2', 'true');
+  }
+
+  if (blacklist) {
+    params.append('blacklist', 'true');
   }
 
   if (sortColumn) {
