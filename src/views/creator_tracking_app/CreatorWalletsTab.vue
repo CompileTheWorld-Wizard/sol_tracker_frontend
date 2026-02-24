@@ -1697,7 +1697,10 @@
                   >
                     <span class="w-3 h-3 inline-flex items-center justify-center" v-html="processSvg(copiedAddress === wallet.address ? checkIconSvg : copyIconSvg, 'w-3 h-3')"></span>
                   </button>
-                  <div class="text-[10px] text-gray-400 font-mono">{{ formatAddress(wallet.address) }}</div>
+                  <div
+                    class="text-[10px] font-mono"
+                    :class="wallet.inBlacklist ? 'text-red-400' : wallet.inTire2 ? 'text-green-300' : 'text-gray-400'"
+                  >{{ formatAddress(wallet.address) }}</div>
                 </div>
               </td>
               <td v-if="columnVisible('totalTokens')" class="px-1 py-1.5 whitespace-nowrap text-right border border-gray-700 w-14">

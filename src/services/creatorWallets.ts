@@ -58,6 +58,8 @@ export interface CreatorWallet {
   expectedROI: ExpectedROI;
   whatIfPnl: WhatIfPnl | null;
   scores: CreatorWalletScores;
+  inTire2: boolean | false;
+  inBlacklist: boolean | false;
 }
 
 export interface PaginationInfo {
