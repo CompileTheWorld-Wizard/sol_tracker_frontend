@@ -1,7 +1,7 @@
 <template>
   <div class="w-full">
     <!-- Top: Migrate buttons (hidden, uncomment to show) -->
-    <div class="mb-4 flex items-center justify-end gap-2">
+    <!-- <div class="mb-4 flex items-center justify-end gap-2">
       <button
         @click="migrateMainToRedis"
         :disabled="migratingMainToRedis || migratingRedisToMain"
@@ -16,7 +16,7 @@
       >
         {{ migratingRedisToMain ? 'Migrating...' : 'Check and Migrate from Redis to Postgres' }}
       </button>
-    </div>
+    </div> -->
     <!-- Tier 2 Whitelist -->
     <div class="min-w-0 flex flex-col">
         <div class="mb-2 flex items-center justify-between gap-2 flex-wrap">
