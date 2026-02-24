@@ -706,7 +706,7 @@
         </span>
       </div>
       
-      <div class="group relative">
+      <!-- <div class="group relative">
         <button
           @click="showManageDialog = true"
           class="w-12 h-12 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500/50 flex items-center justify-center shadow-lg overflow-hidden"
@@ -720,7 +720,7 @@
         <span class="absolute right-full mr-2 top-1/2 -translate-y-1/2 whitespace-nowrap bg-gray-800 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
           Manage Blacklist
         </span>
-      </div>
+      </div> -->
       
       <div class="group relative">
         <button
