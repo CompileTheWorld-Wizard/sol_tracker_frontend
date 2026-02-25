@@ -1143,37 +1143,27 @@ const toggleTracking = async () => {
       // Initiate stop request
       await stopStream()
       
-      // Poll status API to check if stream has actually stopped
-      let attempts = 0
-      const maxAttempts = 3000 // 30 seconds max (30 * 1 second)
-      
-      while (attempts < maxAttempts) {
+      // Poll status API until stopped. Status: 0 = stopped, 1 = running, 2 = stopping.
+      // When status is 2 (stopping), keep calling until it becomes 0 (stopped).
+      while (true) {
         await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-        
+
         try {
           const statusResponse = await getStreamStatus()
-          
-          if (!statusResponse.status) {
+          const status = statusResponse.status
+
+          if (status === 0) {
             // Stream has stopped
             isTracking.value = false
             streamingStartTime.value = null
             break
           }
-          
-          attempts++
+          // status 1 (running) or 2 (stopping): keep polling
         } catch (error) {
           console.error('Error checking stream status:', error)
-          attempts++
         }
       }
-      
-      // If we exceeded max attempts, still mark as stopped locally
-      if (attempts >= maxAttempts) {
-        console.warn('Stream stop polling timed out, marking as stopped anyway')
-        isTracking.value = false
-        streamingStartTime.value = null
-      }
-      
+
       isStopping.value = false
     } else {
       const response = await startStream()
