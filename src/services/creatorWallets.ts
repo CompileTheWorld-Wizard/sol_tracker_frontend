@@ -79,6 +79,7 @@ export interface CreatorWalletsResponse {
 export interface FilterParams {
   totalTokens?: { min?: number; max?: number };
   bondedTokens?: { min?: number; max?: number };
+  bundlerTokenCount?: { min?: number; max?: number };
   winRate?: Array<{
     type: 'percent' | 'score';
     min?: number;

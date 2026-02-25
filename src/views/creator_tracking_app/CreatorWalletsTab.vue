@@ -271,6 +271,35 @@
               </button>
             </div>
 
+            <!-- Bundler Tokens Filter Widget -->
+            <div v-if="isFilterAdded('bundlerTokenCount')" class="inline-flex items-center gap-2 px-3 py-2 bg-cyan-600/20 border border-cyan-500/30 rounded-lg">
+              <span class="text-xs font-semibold text-cyan-300">Bundler Tokens:</span>
+              <input
+                v-model.number="filters.bundlerTokenCount.min"
+                type="number"
+                min="0"
+                placeholder="Min"
+                class="px-2 py-1 text-xs bg-gray-900/50 border border-gray-700 rounded text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-20"
+              />
+              <span class="text-xs text-gray-400">to</span>
+              <input
+                v-model.number="filters.bundlerTokenCount.max"
+                type="number"
+                min="0"
+                placeholder="Max"
+                class="px-2 py-1 text-xs bg-gray-900/50 border border-gray-700 rounded text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-20"
+              />
+              <button
+                @click="removeFilter('bundlerTokenCount')"
+                class="ml-1 text-gray-400 hover:text-red-400 transition"
+                title="Remove filter"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
             <!-- Win Rate Filter Widgets -->
             <div
               v-for="(filter, index) in filters.winRate"
@@ -680,23 +709,23 @@
             <label class="block text-sm font-semibold text-gray-300 mb-2">Select Filter Type:</label>
             <div class="bg-gray-800/50 border border-gray-700 rounded-lg p-3 max-h-64 overflow-y-auto">
               <!-- Token Count Group -->
-              <div v-if="shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count')" class="mb-2">
-                <div 
+              <div v-if="shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count') || shouldShowFilterItem('Bundler Tokens', 'Token Count')" class="mb-2">
+                <div
                   @click="expandedGroups.tokenCount = !expandedGroups.tokenCount"
                   class="text-xs font-semibold text-gray-400 mb-1 flex items-center gap-1 cursor-pointer hover:text-gray-300"
                 >
-                  <svg 
+                  <svg
                     class="w-3 h-3 transition-transform"
-                    :class="{ 'rotate-90': expandedGroups.tokenCount || (filterSearchQuery && (shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count'))) }"
-                    fill="none" 
-                    stroke="currentColor" 
+                    :class="{ 'rotate-90': expandedGroups.tokenCount || (filterSearchQuery && (shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count') || shouldShowFilterItem('Bundler Tokens', 'Token Count'))) }"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                   </svg>
                   Token Count
                 </div>
-                <div v-if="expandedGroups.tokenCount || (filterSearchQuery && (shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count')))" class="ml-4 space-y-1">
+                <div v-if="expandedGroups.tokenCount || (filterSearchQuery && (shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count') || shouldShowFilterItem('Bundler Tokens', 'Token Count')))" class="ml-4 space-y-1">
                   <div
                     v-if="shouldShowFilterItem('Total Tokens', 'Token Count')"
                     @click="!isFilterAdded('totalTokens') && selectFilterType('totalTokens')"
@@ -704,8 +733,8 @@
                       'px-2 py-1.5 text-xs rounded transition',
                       isFilterAdded('totalTokens')
                         ? 'text-gray-500 cursor-not-allowed opacity-50'
-                        : newFilterType === 'totalTokens' 
-                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 cursor-pointer' 
+                        : newFilterType === 'totalTokens'
+                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 cursor-pointer'
                           : 'text-gray-300 hover:bg-gray-700/50 cursor-pointer'
                     ]"
                   >
@@ -718,12 +747,26 @@
                       'px-2 py-1.5 text-xs rounded transition',
                       isFilterAdded('bondedTokens')
                         ? 'text-gray-500 cursor-not-allowed opacity-50'
-                        : newFilterType === 'bondedTokens' 
-                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 cursor-pointer' 
+                        : newFilterType === 'bondedTokens'
+                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 cursor-pointer'
                           : 'text-gray-300 hover:bg-gray-700/50 cursor-pointer'
                     ]"
                   >
                     Bonded Tokens
+                  </div>
+                  <div
+                    v-if="shouldShowFilterItem('Bundler Tokens', 'Token Count')"
+                    @click="!isFilterAdded('bundlerTokenCount') && selectFilterType('bundlerTokenCount')"
+                    :class="[
+                      'px-2 py-1.5 text-xs rounded transition',
+                      isFilterAdded('bundlerTokenCount')
+                        ? 'text-gray-500 cursor-not-allowed opacity-50'
+                        : newFilterType === 'bundlerTokenCount'
+                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 cursor-pointer'
+                          : 'text-gray-300 hover:bg-gray-700/50 cursor-pointer'
+                    ]"
+                  >
+                    Bundler Tokens
                   </div>
                 </div>
               </div>
@@ -2343,6 +2386,7 @@ const savingToWhitelist = ref(false)
 interface Filters {
   totalTokens: { min?: number; max?: number }
   bondedTokens: { min?: number; max?: number }
+  bundlerTokenCount: { min?: number; max?: number }
   winRate: Array<{
     type: 'percent' | 'score'
     min?: number
@@ -2384,6 +2428,7 @@ interface Filters {
 const filters = ref<Filters>({
   totalTokens: {},
   bondedTokens: {},
+  bundlerTokenCount: {},
   winRate: [],
   avgMcap: [],
   medianMcap: [],
@@ -2445,6 +2490,8 @@ const isSelectedFilterAlreadyAdded = computed(() => {
       return isFilterAdded('totalTokens')
     case 'bondedTokens':
       return isFilterAdded('bondedTokens')
+    case 'bundlerTokenCount':
+      return isFilterAdded('bundlerTokenCount')
     case 'rugRate':
       return isFilterAdded('rugRate')
     case 'avgRugTime':
@@ -2577,7 +2624,7 @@ const getAvgBuySellsFilterLabel = (type: 'buyCount' | 'buySol' | 'sellCount' | '
 const hasVisibleFilterItems = computed(() => {
   if (!filterSearchQuery.value) return true
   
-  const hasTokenCount = shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count')
+  const hasTokenCount = shouldShowFilterItem('Total Tokens', 'Token Count') || shouldShowFilterItem('Bonded Tokens', 'Token Count') || shouldShowFilterItem('Bundler Tokens', 'Token Count')
   const hasWinRate = shouldShowFilterItem('Win Rate (Percentage)', 'Win Rate') || shouldShowFilterItem('Win Rate (Score)', 'Win Rate')
   const hasAvgMcap = shouldShowFilterItem('Average MCap (Amount)', 'Average Market Cap') || shouldShowFilterItem('Average MCap (Percentile)', 'Average Market Cap') || shouldShowFilterItem('Average MCap (Score)', 'Average Market Cap')
   const hasMedianMcap = shouldShowFilterItem('Median MCap (Amount)', 'Median ATH Market Cap') || shouldShowFilterItem('Median MCap (Score)', 'Median ATH Market Cap')
@@ -2609,6 +2656,13 @@ const confirmAddFilter = () => {
         max: undefined
       }
       addedFilterTypes.value.add('bondedTokens')
+      break
+    case 'bundlerTokenCount':
+      filters.value.bundlerTokenCount = {
+        min: undefined,
+        max: undefined
+      }
+      addedFilterTypes.value.add('bundlerTokenCount')
       break
     case 'rugRate':
       filters.value.rugRate = {
@@ -2810,7 +2864,7 @@ const cancelAddFilter = () => {
 }
 
 // Remove a specific filter
-const removeFilter = (filterType: 'totalTokens' | 'bondedTokens' | 'rugRate' | 'avgRugTime' | 'finalScore') => {
+const removeFilter = (filterType: 'totalTokens' | 'bondedTokens' | 'bundlerTokenCount' | 'rugRate' | 'avgRugTime' | 'finalScore') => {
   switch (filterType) {
     case 'totalTokens':
       filters.value.totalTokens = {}
@@ -2819,6 +2873,10 @@ const removeFilter = (filterType: 'totalTokens' | 'bondedTokens' | 'rugRate' | '
     case 'bondedTokens':
       filters.value.bondedTokens = {}
       addedFilterTypes.value.delete('bondedTokens')
+      break
+    case 'bundlerTokenCount':
+      filters.value.bundlerTokenCount = {}
+      addedFilterTypes.value.delete('bundlerTokenCount')
       break
     case 'rugRate':
       filters.value.rugRate = {}
@@ -2870,6 +2928,7 @@ const clearFilters = () => {
   filters.value = {
     totalTokens: {},
     bondedTokens: {},
+    bundlerTokenCount: {},
     winRate: [],
     avgMcap: [],
     medianMcap: [],
@@ -2890,6 +2949,7 @@ const hasActiveFilters = computed(() => {
   return !!(
     addedFilterTypes.value.has('totalTokens') ||
     addedFilterTypes.value.has('bondedTokens') ||
+    addedFilterTypes.value.has('bundlerTokenCount') ||
     addedFilterTypes.value.has('rugRate') ||
     addedFilterTypes.value.has('avgRugTime') ||
     addedFilterTypes.value.has('finalScore') ||
@@ -2906,6 +2966,7 @@ const activeFilterCount = computed(() => {
   let count = 0
   if (addedFilterTypes.value.has('totalTokens')) count++
   if (addedFilterTypes.value.has('bondedTokens')) count++
+  if (addedFilterTypes.value.has('bundlerTokenCount')) count++
   if (addedFilterTypes.value.has('rugRate')) count++
   if (addedFilterTypes.value.has('avgRugTime')) count++
   if (addedFilterTypes.value.has('finalScore')) count++
@@ -2946,6 +3007,9 @@ const loadFilterPreset = () => {
     }
     if (filters.value.bondedTokens && (filters.value.bondedTokens.min !== undefined || filters.value.bondedTokens.max !== undefined)) {
       addedFilterTypes.value.add('bondedTokens')
+    }
+    if (filters.value.bundlerTokenCount && (filters.value.bundlerTokenCount.min !== undefined || filters.value.bundlerTokenCount.max !== undefined)) {
+      addedFilterTypes.value.add('bundlerTokenCount')
     }
     if (filters.value.rugRate && (filters.value.rugRate.min !== undefined || filters.value.rugRate.max !== undefined)) {
       addedFilterTypes.value.add('rugRate')
@@ -3036,6 +3100,11 @@ function buildFilterParamsAndWhatIf(): { filterParams: Record<string, unknown>; 
     filterParams.bondedTokens = {}
     if (filters.value.bondedTokens.min !== undefined) (filterParams.bondedTokens as any).min = filters.value.bondedTokens.min
     if (filters.value.bondedTokens.max !== undefined) (filterParams.bondedTokens as any).max = filters.value.bondedTokens.max
+  }
+  if (filters.value.bundlerTokenCount && (filters.value.bundlerTokenCount.min !== undefined || filters.value.bundlerTokenCount.max !== undefined)) {
+    filterParams.bundlerTokenCount = {}
+    if (filters.value.bundlerTokenCount.min !== undefined) (filterParams.bundlerTokenCount as any).min = filters.value.bundlerTokenCount.min
+    if (filters.value.bundlerTokenCount.max !== undefined) (filterParams.bundlerTokenCount as any).max = filters.value.bundlerTokenCount.max
   }
   if (filters.value.winRate.length > 0) filterParams.winRate = filters.value.winRate
   if (filters.value.avgMcap.length > 0) filterParams.avgMcap = filters.value.avgMcap
@@ -3448,13 +3517,13 @@ const handleItemsPerPageChange = () => {
 const loadWallets = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const limit = itemsPerPage.value === 'all' ? 1000000 : (itemsPerPage.value as number)
-    
+
     // Build filter object
     const filterParams: any = {}
-    
+
     if (filters.value.totalTokens.min !== undefined || filters.value.totalTokens.max !== undefined) {
       filterParams.totalTokens = {}
       if (filters.value.totalTokens.min !== undefined) {
@@ -3464,7 +3533,7 @@ const loadWallets = async () => {
         filterParams.totalTokens.max = filters.value.totalTokens.max
       }
     }
-    
+
     if (filters.value.bondedTokens.min !== undefined || filters.value.bondedTokens.max !== undefined) {
       filterParams.bondedTokens = {}
       if (filters.value.bondedTokens.min !== undefined) {
@@ -3472,6 +3541,16 @@ const loadWallets = async () => {
       }
       if (filters.value.bondedTokens.max !== undefined) {
         filterParams.bondedTokens.max = filters.value.bondedTokens.max
+      }
+    }
+
+    if (filters.value.bundlerTokenCount && (filters.value.bundlerTokenCount.min !== undefined || filters.value.bundlerTokenCount.max !== undefined)) {
+      filterParams.bundlerTokenCount = {}
+      if (filters.value.bundlerTokenCount.min !== undefined) {
+        filterParams.bundlerTokenCount.min = filters.value.bundlerTokenCount.min
+      }
+      if (filters.value.bundlerTokenCount.max !== undefined) {
+        filterParams.bundlerTokenCount.max = filters.value.bundlerTokenCount.max
       }
     }
     
@@ -3629,10 +3708,10 @@ const handleExport = async () => {
   try {
     loading.value = true
     error.value = ''
-    
+
     // Build filter object (same logic as loadWallets)
     const filterParams: any = {}
-    
+
     if (filters.value.totalTokens.min !== undefined || filters.value.totalTokens.max !== undefined) {
       filterParams.totalTokens = {}
       if (filters.value.totalTokens.min !== undefined) {
@@ -3642,7 +3721,7 @@ const handleExport = async () => {
         filterParams.totalTokens.max = filters.value.totalTokens.max
       }
     }
-    
+
     if (filters.value.bondedTokens.min !== undefined || filters.value.bondedTokens.max !== undefined) {
       filterParams.bondedTokens = {}
       if (filters.value.bondedTokens.min !== undefined) {
@@ -3650,6 +3729,16 @@ const handleExport = async () => {
       }
       if (filters.value.bondedTokens.max !== undefined) {
         filterParams.bondedTokens.max = filters.value.bondedTokens.max
+      }
+    }
+
+    if (filters.value.bundlerTokenCount && (filters.value.bundlerTokenCount.min !== undefined || filters.value.bundlerTokenCount.max !== undefined)) {
+      filterParams.bundlerTokenCount = {}
+      if (filters.value.bundlerTokenCount.min !== undefined) {
+        filterParams.bundlerTokenCount.min = filters.value.bundlerTokenCount.min
+      }
+      if (filters.value.bundlerTokenCount.max !== undefined) {
+        filterParams.bundlerTokenCount.max = filters.value.bundlerTokenCount.max
       }
     }
     
