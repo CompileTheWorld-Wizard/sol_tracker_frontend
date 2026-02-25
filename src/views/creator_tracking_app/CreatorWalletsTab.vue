@@ -1437,6 +1437,17 @@
                 </div>
               </th>
               <th
+                v-if="columnVisible('bundlerTokenCount')"
+                rowspan="2"
+                @click="handleSort('bundlerTokenCount')"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
+              >
+                <div class="flex items-center justify-center gap-1">
+                  <span>Bundler Tokens</span>
+                  <span v-if="getSortIcon('bundlerTokenCount')" class="text-purple-400">{{ getSortIcon('bundlerTokenCount') }}</span>
+                </div>
+              </th>
+              <th
                 v-if="columnVisible('winRate')"
                 rowspan="2" 
                 @click="handleSort('winRate')"
@@ -1710,6 +1721,9 @@
               </td>
               <td v-if="columnVisible('bondedTokens')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold text-green-400">{{ wallet.bondedTokens }}</div>
+              </td>
+              <td v-if="columnVisible('bundlerTokenCount')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
+                <div class="text-xs font-semibold text-gray-200">{{ wallet.bundlerTokenCount ?? 0 }}</div>
               </td>
               <td v-if="columnVisible('winRate')" class="px-2 py-1.5 whitespace-nowrap text-right border border-gray-700">
                 <div class="text-xs font-semibold" :class="getWinRateColor(wallet.winRate)">
@@ -2215,6 +2229,7 @@ const TABLE_COLUMNS: { id: string; label: string; defaultVisible: boolean }[] = 
   { id: 'address', label: 'Wallet Address', defaultVisible: true },
   { id: 'totalTokens', label: 'Total Tokens', defaultVisible: true },
   { id: 'bondedTokens', label: 'Bonded Tokens', defaultVisible: true },
+  { id: 'bundlerTokenCount', label: 'Bundler Tokens', defaultVisible: true },
   { id: 'winRate', label: 'Win Rate', defaultVisible: true },
   { id: 'avgAthMcap', label: 'Avg ATH MCap', defaultVisible: true },
   { id: 'medianAthMcap', label: 'Median ATH MCap', defaultVisible: true },

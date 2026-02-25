@@ -51,6 +51,7 @@ export interface CreatorWallet {
   athMcapPercentileRank: number | null; // Percentile rank (0-100) of this creator's avg ATH compared to all creators
   athMcapPercentiles: AthMcapPercentiles;
   validTokenCount: number; // Tokens with both initial and ATH market cap > 0
+  bundlerTokenCount?: number; // Number of bundler tokens
   avgRugRate: number; // Overall rug rate (%)
   avgRugTime: number | null; // Average rug time in seconds (when tokens rug on average)
   multiplierPercentages: Record<number, number>; // % of tokens that reach each multiplier threshold
