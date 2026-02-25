@@ -43,6 +43,7 @@ export interface AthMcapPercentiles {
 
 export interface CreatorWallet {
   address: string;
+  created_at?: string; // ISO date string e.g. "2026-02-22T04:44:08.000Z"
   totalTokens: number;
   bondedTokens: number;
   winRate: number; // % bonded (win rate)

@@ -1454,6 +1454,17 @@
                 </div>
               </th>
               <th
+                v-if="columnVisible('createdAt')"
+                rowspan="2"
+                @click="handleSort('createdAt')"
+                class="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition select-none"
+              >
+                <div class="flex items-center justify-center gap-1">
+                  <span>Created At</span>
+                  <span v-if="getSortIcon('createdAt')" class="text-purple-400">{{ getSortIcon('createdAt') }}</span>
+                </div>
+              </th>
+              <th
                 v-if="columnVisible('totalTokens')"
                 rowspan="2" 
                 @click="handleSort('totalTokens')"
@@ -1755,6 +1766,11 @@
                     class="text-[10px] font-mono"
                     :class="wallet.inBlacklist ? 'text-red-400' : wallet.inTire2 ? 'text-green-300' : 'text-gray-400'"
                   >{{ formatAddress(wallet.address) }}</div>
+                </div>
+              </td>
+              <td v-if="columnVisible('createdAt')" class="px-2 py-1.5 whitespace-nowrap border border-gray-700">
+                <div class="text-xs text-gray-300" :title="wallet.created_at || ''">
+                  {{ formatCreatedAt(wallet.created_at) }}
                 </div>
               </td>
               <td v-if="columnVisible('totalTokens')" class="px-1 py-1.5 whitespace-nowrap text-right border border-gray-700 w-14">
@@ -2270,6 +2286,7 @@ const whatIfSettings = ref<{
 // Table column visibility (saved in preset via API, not localStorage)
 const TABLE_COLUMNS: { id: string; label: string; defaultVisible: boolean }[] = [
   { id: 'address', label: 'Wallet Address', defaultVisible: true },
+  { id: 'createdAt', label: 'Created At', defaultVisible: true },
   { id: 'totalTokens', label: 'Total Tokens', defaultVisible: true },
   { id: 'bondedTokens', label: 'Bonded Tokens', defaultVisible: true },
   { id: 'bundlerTokenCount', label: 'Bundler Tokens', defaultVisible: true },
@@ -3388,6 +3405,17 @@ const getSortIcon = (column: string) => {
 const formatAddress = (address: string): string => {
   if (!address) return ''
   return `${address.slice(0, 8)}...${address.slice(-8)}`
+}
+
+const formatCreatedAt = (isoDate: string | undefined): string => {
+  if (!isoDate) return '—'
+  try {
+    const d = new Date(isoDate)
+    if (Number.isNaN(d.getTime())) return isoDate
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return isoDate
+  }
 }
 
 const handleRowClick = async (walletAddress: string) => {
